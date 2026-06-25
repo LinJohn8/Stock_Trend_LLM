@@ -39,18 +39,30 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 
 ## 安装与启动
 
-Docker 推荐方式：
+Docker 首次构建或依赖变更后：
 
 ```bash
 cp .env.sample .env
-docker compose up --build
+./docker-build.command
+```
+
+日常启动，不重新 build：
+
+```bash
+./start.command
 ```
 
 macOS 双击启动：
 
 ```bash
-chmod +x start.command start_api.command
+chmod +x start.command start_api.command docker-build.command start_local.command
 open start.command
+```
+
+如果 Docker Hub 访问超时，可以先用本地 Python 方式启动：
+
+```bash
+./start_local.command
 ```
 
 本地 Python：

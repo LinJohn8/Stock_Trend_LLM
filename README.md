@@ -40,9 +40,17 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 
 ## Quick Start
 
+First build or after dependency changes:
+
 ```bash
 cp .env.sample .env
-docker compose up --build
+./docker-build.command
+```
+
+Daily start without rebuilding:
+
+```bash
+./start.command
 ```
 
 Open:
@@ -53,7 +61,14 @@ Open:
 On macOS you can also double-click:
 
 ```bash
+chmod +x start.command start_api.command docker-build.command start_local.command
 open start.command
+```
+
+If Docker Hub is slow or unavailable, use local Python mode:
+
+```bash
+./start_local.command
 ```
 
 ## Local Python Setup
@@ -132,7 +147,7 @@ pytest
 
 ## Long-Running Use
 
-`docker-compose.yml` starts two services:
+`docker-compose.yml` starts two services from the same local image `stock-trend-llm:latest`:
 
 - `stock-ai-dashboard`: Streamlit dashboard on port `8501`.
 - `stock-ai-api`: FastAPI plus APScheduler on port `8000`.

@@ -20,7 +20,8 @@ Do not commit `.env`.
 ## 3. Start With Docker
 
 ```bash
-docker compose up --build
+./docker-build.command
+./start.command
 ```
 
 Open:
@@ -31,8 +32,14 @@ Open:
 ## 4. macOS Double-Click Start
 
 ```bash
-chmod +x start.command start_api.command
+chmod +x start.command start_api.command docker-build.command start_local.command
 open start.command
+```
+
+If Docker Hub times out when pulling `python:3.11-slim`, start locally:
+
+```bash
+./start_local.command
 ```
 
 ## 5. Local Python Start
