@@ -225,6 +225,21 @@ class StockSkillReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class AlgorithmRun(Base):
+    __tablename__ = "algorithm_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_code: Mapped[str] = mapped_column(String(16), index=True)
+    stock_name: Mapped[str] = mapped_column(String(64), default="")
+    run_date: Mapped[date] = mapped_column(Date, index=True)
+    selected_algorithms: Mapped[str] = mapped_column(Text, default="[]")
+    result_json: Mapped[str] = mapped_column(Text, default="{}")
+    overall_score: Mapped[float] = mapped_column(Float, default=50)
+    action: Mapped[str] = mapped_column(String(32), default="uncertain")
+    confidence: Mapped[float] = mapped_column(Float, default=50)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class EmailLog(Base):
     __tablename__ = "email_logs"
 

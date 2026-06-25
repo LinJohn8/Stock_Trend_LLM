@@ -186,6 +186,19 @@ CREATE TABLE IF NOT EXISTS stock_skill_reviews (
     created_at DATETIME
 );
 
+CREATE TABLE IF NOT EXISTS algorithm_runs (
+    id INTEGER PRIMARY KEY,
+    stock_code VARCHAR(16) NOT NULL,
+    stock_name VARCHAR(64),
+    run_date DATE NOT NULL,
+    selected_algorithms TEXT,
+    result_json TEXT,
+    overall_score FLOAT,
+    action VARCHAR(32),
+    confidence FLOAT,
+    created_at DATETIME
+);
+
 CREATE TABLE IF NOT EXISTS email_logs (
     id INTEGER PRIMARY KEY,
     send_time DATETIME,

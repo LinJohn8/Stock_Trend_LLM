@@ -24,6 +24,7 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 - Track 1/5/20/60-day forward returns for historical signals.
 - Create learning memories from failed or uncertain simulated decisions, including possible causes, evidence snapshots, and proposed rule changes.
 - Run selectable LLM review skills after deterministic calculations, such as conservative decision review, technical signal explanation, news risk checking, and learning-memory review.
+- Run selectable deterministic analysis algorithms from the dashboard after pulling stock data.
 - Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
 - Run with Docker Compose for long-running local use.
@@ -172,6 +173,26 @@ The dashboard includes an `LLM Skill 查看` page. It first builds a computed co
 - `4. 历史错误记忆复盘`
 
 Each skill review is saved in `stock_skill_reviews` with the input snapshot, selected skill, model, provider, and output text.
+
+## Selectable Algorithms
+
+The dashboard includes an `算法分析` page:
+
+1. Enter a stock code.
+2. Pull or refresh historical data.
+3. Select algorithms.
+4. Run and save the result to `algorithm_runs`.
+
+Built-in algorithms:
+
+- Trend following
+- Momentum
+- Mean reversion
+- Valuation
+- Capital/volume
+- News risk
+- Holding review
+- Learning memory
 
 ## Logs
 

@@ -95,6 +95,17 @@ Open `LLM Skill 查看` in the dashboard:
 
 The review is saved and can be inspected later with its original input snapshot.
 
+## 11. Algorithm Selection
+
+Open `算法分析` in the dashboard:
+
+- Enter a stock code.
+- Enable `运行前拉取/更新数据`.
+- Select one or more algorithms.
+- Run analysis.
+
+Results are saved in `algorithm_runs` and can be reviewed later.
+
 ## Reminder
 
 This project is for information collection, indicator calculation, simulated review, and AI-assisted explanation. It is not an auto-trading system and does not provide investment advice or profit guarantees.

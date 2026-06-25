@@ -6,6 +6,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from database.db import init_db
+from services.algorithm_service import AlgorithmService
 from services.indicator_service import IndicatorService
 from services.llm_skill_service import LLMReviewSkillService
 from services.signal_service import SignalService
@@ -19,6 +20,7 @@ code = st.text_input("输入股票代码", value="600519")
 if code:
     data_service = StockDataService()
     skill_service = LLMReviewSkillService()
+    algorithm_service = AlgorithmService()
     if st.button("更新并分析"):
         data_service.update_daily_data(code)
         st.json(SignalService().analyze_stock(code))
@@ -37,6 +39,14 @@ if code:
         fig.update_layout(height=640, xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(df.tail(30), use_container_width=True, hide_index=True)
+
+        st.subheader("算法分析")
+        algorithms = algorithm_service.list_algorithms()
+        algo_map = {algo.name: algo.id for algo in algorithms}
+        selected_algos = st.multiselect("选择算法", list(algo_map.keys()), default=list(algo_map.keys()))
+        if st.button("运行算法"):
+            result = algorithm_service.run(code, selected_algorithm_ids=[algo_map[name] for name in selected_algos], fetch_data=False)
+            st.json(result)
 
         st.subheader("LLM Skill 查看")
         skills = skill_service.list_skills()
