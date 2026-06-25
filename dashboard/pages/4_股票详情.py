@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 
 from database.db import init_db
 from services.indicator_service import IndicatorService
+from services.llm_skill_service import LLMReviewSkillService
 from services.signal_service import SignalService
 from services.stock_data_service import StockDataService
 
@@ -17,6 +18,7 @@ st.title("股票详情")
 code = st.text_input("输入股票代码", value="600519")
 if code:
     data_service = StockDataService()
+    skill_service = LLMReviewSkillService()
     if st.button("更新并分析"):
         data_service.update_daily_data(code)
         st.json(SignalService().analyze_stock(code))
@@ -35,5 +37,18 @@ if code:
         fig.update_layout(height=640, xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(df.tail(30), use_container_width=True, hide_index=True)
+
+        st.subheader("LLM Skill 查看")
+        skills = skill_service.list_skills()
+        options = {"不使用 Skill，只查看计算结果": None}
+        options.update({skill.name: skill.id for skill in skills})
+        selected = st.selectbox("选择 Skill", list(options.keys()))
+        if st.button("运行查看"):
+            if options[selected] is None:
+                st.json(skill_service.build_computed_context(code))
+            else:
+                review = skill_service.run_skill(code, options[selected])
+                st.success(f"已保存 Skill Review #{review.id}")
+                st.markdown(review.result_text)
     else:
         st.warning("暂无行情数据，可能是网络、代码或数据源问题。")

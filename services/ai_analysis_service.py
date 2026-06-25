@@ -45,6 +45,17 @@ class AIAnalysisService:
             logger.exception("AI holding review failed: %s", exc)
             return context
 
+    def complete_skill_review(self, prompt_template: str, context: dict[str, Any]) -> str:
+        """Run a free-form LLM skill review with computed context."""
+        if not self.settings.ai_enabled:
+            return _local_skill_fallback(context)
+        try:
+            prompt = prompt_template.replace("{{CONTEXT_JSON}}", json.dumps(context, ensure_ascii=False, default=str))
+            return self._provider().complete(prompt)
+        except Exception as exc:
+            logger.exception("AI skill review failed: %s", exc)
+            return _local_skill_fallback(context)
+
     def _provider(self):
         if self.settings.ai_provider == "openai":
             return OpenAIProvider()
@@ -74,3 +85,16 @@ class AIAnalysisService:
             if key in data and not isinstance(data[key], list):
                 data[key] = [str(data[key])]
         return {**fallback, **data}
+
+
+def _local_skill_fallback(context: dict[str, Any]) -> str:
+    signal = context.get("latest_signal") or {}
+    technical = context.get("technical") or {}
+    risk = context.get("risk") or {}
+    return (
+        "AI 未启用或调用失败，以下为本地计算摘要：\n"
+        f"- 动作：{signal.get('action', 'uncertain')}，综合评分：{signal.get('overall_score', '-')}\n"
+        f"- 技术摘要：{technical.get('technical_summary', '暂无')}\n"
+        f"- 风险等级：{risk.get('risk_level', 'unknown')}，风险点：{risk.get('risk_points', [])}\n"
+        "- 请仅将该结果作为研究和复盘材料，不构成投资建议。"
+    )

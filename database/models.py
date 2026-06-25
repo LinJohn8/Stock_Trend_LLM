@@ -209,6 +209,22 @@ class LearningMemory(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class StockSkillReview(Base):
+    __tablename__ = "stock_skill_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_code: Mapped[str] = mapped_column(String(16), index=True)
+    stock_name: Mapped[str] = mapped_column(String(64), default="")
+    skill_id: Mapped[str] = mapped_column(String(64), index=True)
+    skill_name: Mapped[str] = mapped_column(String(128), default="")
+    review_date: Mapped[date] = mapped_column(Date, index=True)
+    input_snapshot: Mapped[str] = mapped_column(Text, default="{}")
+    result_text: Mapped[str] = mapped_column(Text, default="")
+    ai_provider: Mapped[str] = mapped_column(String(64), default="")
+    ai_model: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class EmailLog(Base):
     __tablename__ = "email_logs"
 

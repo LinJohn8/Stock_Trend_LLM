@@ -23,6 +23,7 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 - Save every signal for paper-trading review.
 - Track 1/5/20/60-day forward returns for historical signals.
 - Create learning memories from failed or uncertain simulated decisions, including possible causes, evidence snapshots, and proposed rule changes.
+- Run selectable LLM review skills after deterministic calculations, such as conservative decision review, technical signal explanation, news risk checking, and learning-memory review.
 - Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
 - Run with Docker Compose for long-running local use.
@@ -159,6 +160,18 @@ The project records an auditable memory trail for model and rule improvement:
   - review status: `open`, `reviewed`, `applied`, `ignored`
 
 This memory does not silently change trading rules. It gives you a structured backlog for future project updates.
+
+## LLM Review Skills
+
+The dashboard includes an `LLM Skill 查看` page. It first builds a computed context snapshot, then optionally runs a selected LLM skill:
+
+- No skill: inspect raw computed context only.
+- `1. 保守决策复核`
+- `2. 技术信号解释`
+- `3. 新闻风险核查`
+- `4. 历史错误记忆复盘`
+
+Each skill review is saved in `stock_skill_reviews` with the input snapshot, selected skill, model, provider, and output text.
 
 ## Logs
 

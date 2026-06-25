@@ -172,6 +172,20 @@ CREATE TABLE IF NOT EXISTS learning_memories (
     UNIQUE(signal_id, horizon_days)
 );
 
+CREATE TABLE IF NOT EXISTS stock_skill_reviews (
+    id INTEGER PRIMARY KEY,
+    stock_code VARCHAR(16) NOT NULL,
+    stock_name VARCHAR(64),
+    skill_id VARCHAR(64) NOT NULL,
+    skill_name VARCHAR(128),
+    review_date DATE NOT NULL,
+    input_snapshot TEXT,
+    result_text TEXT,
+    ai_provider VARCHAR(64),
+    ai_model VARCHAR(64),
+    created_at DATETIME
+);
+
 CREATE TABLE IF NOT EXISTS email_logs (
     id INTEGER PRIMARY KEY,
     send_time DATETIME,

@@ -85,6 +85,16 @@ python -m tasks.generate_learning_memory
 
 Open the dashboard page `学习记忆` to review possible causes, evidence snapshots, and proposed rule changes.
 
+## 10. LLM Skill Review
+
+Open `LLM Skill 查看` in the dashboard:
+
+- Choose a stock.
+- Choose `不使用 Skill` to inspect computed context.
+- Or choose one of the built-in skills to ask the LLM for a focused review.
+
+The review is saved and can be inspected later with its original input snapshot.
+
 ## Reminder
 
 This project is for information collection, indicator calculation, simulated review, and AI-assisted explanation. It is not an auto-trading system and does not provide investment advice or profit guarantees.
