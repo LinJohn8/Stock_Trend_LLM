@@ -17,11 +17,11 @@ Edit `.env` and fill in your own email SMTP authorization code and DeepSeek API 
 
 Do not commit `.env`.
 
-## 3. Start With Docker
+## 3. Local Start
 
 ```bash
-./docker-build.command
-./start.command
+chmod +x local.command LAN.command
+./local.command
 ```
 
 Open:
@@ -29,18 +29,15 @@ Open:
 - Dashboard: http://localhost:8501
 - API health check: http://localhost:8000/health
 
-## 4. macOS Double-Click Start
+## 4. LAN Start
 
 ```bash
-chmod +x start.command start_api.command docker-build.command start_local.command
-open start.command
+./LAN.command
 ```
 
-If Docker Hub times out when pulling `python:3.11-slim`, start locally:
+`LAN.command` prints the LAN URL, usually like:
 
-```bash
-./start_local.command
-```
+`http://192.168.x.x:8501`
 
 ## 5. Local Python Start
 
@@ -69,7 +66,7 @@ Default sample schedule:
 EMAIL_SEND_TIMES=08:50,14:20
 ```
 
-The scheduler runs in the FastAPI service. With Docker Compose, it starts automatically as `stock-ai-api`.
+The scheduler runs in the FastAPI service started by `local.command` or `LAN.command`.
 
 ## 8. Manual Commands
 

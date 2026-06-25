@@ -35,46 +35,28 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 - LLM Skill 查看：在指标、风险、持仓、历史记忆等计算完成后，选择不同 Skill 让 LLM 从保守决策、技术信号、新闻风险、历史错误记忆等角度解释。
 - 算法分析：仪表盘可输入股票代码拉取数据，并勾选趋势、动量、均值回归、估值、资金量价、新闻风险、持仓复核、历史记忆等算法组合运行。
 - Streamlit 仪表盘：首页、自选股、持仓、每日分析、股票详情、模拟复盘、邮件设置、系统设置。
-- Docker 长期运行：仪表盘和 FastAPI/定时器分成两个服务。
+- 只保留两个 macOS 启动脚本：本机访问和局域网访问。
 
 ## 安装与启动
 
-Docker 首次构建或依赖变更后：
+本机访问启动：
 
 ```bash
 cp .env.sample .env
-./docker-build.command
+chmod +x local.command LAN.command
+./local.command
 ```
 
-日常启动，不重新 build：
+局域网访问启动：
 
 ```bash
-./start.command
+./LAN.command
 ```
 
-macOS 双击启动：
+也可以在 Finder 里双击：
 
-```bash
-chmod +x start.command start_api.command docker-build.command start_local.command
-open start.command
-```
-
-如果 Docker Hub 访问超时，可以先用本地 Python 方式启动：
-
-```bash
-./start_local.command
-```
-
-本地 Python：
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.sample .env
-python -c "from database.db import init_db; init_db()"
-streamlit run dashboard/streamlit_app.py
-```
+- `local.command`：绑定 `127.0.0.1`，只允许本机访问。
+- `LAN.command`：绑定 `0.0.0.0`，允许同一局域网设备访问。
 
 打开：
 

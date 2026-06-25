@@ -27,7 +27,7 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 - Run selectable deterministic analysis algorithms from the dashboard after pulling stock data.
 - Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
-- Run with Docker Compose for long-running local use.
+- Start with only two macOS command scripts: local-only or LAN-accessible.
 
 ## Safety Boundaries
 
@@ -40,17 +40,18 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 
 ## Quick Start
 
-First build or after dependency changes:
+Local-only start:
 
 ```bash
 cp .env.sample .env
-./docker-build.command
+chmod +x local.command LAN.command
+./local.command
 ```
 
-Daily start without rebuilding:
+LAN-accessible start:
 
 ```bash
-./start.command
+./LAN.command
 ```
 
 Open:
@@ -58,29 +59,10 @@ Open:
 - Dashboard: http://localhost:8501
 - API health check: http://localhost:8000/health
 
-On macOS you can also double-click:
+You can also double-click either command file in Finder:
 
-```bash
-chmod +x start.command start_api.command docker-build.command start_local.command
-open start.command
-```
-
-If Docker Hub is slow or unavailable, use local Python mode:
-
-```bash
-./start_local.command
-```
-
-## Local Python Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.sample .env
-python -c "from database.db import init_db; init_db()"
-streamlit run dashboard/streamlit_app.py
-```
+- `local.command`: binds to `127.0.0.1`, only this Mac can access it.
+- `LAN.command`: binds to `0.0.0.0`, other devices on the same LAN can access it.
 
 ## Environment Variables
 
@@ -147,10 +129,10 @@ pytest
 
 ## Long-Running Use
 
-`docker-compose.yml` starts two services from the same local image `stock-trend-llm:latest`:
+Both command scripts start two local processes:
 
-- `stock-ai-dashboard`: Streamlit dashboard on port `8501`.
-- `stock-ai-api`: FastAPI plus APScheduler on port `8000`.
+- Streamlit dashboard on port `8501`.
+- FastAPI plus APScheduler on port `8000`.
 
 The scheduler registers one daily job per configured send time. For example:
 
