@@ -1,0 +1,1 @@
+{"op":"create","entity":{"id":"project_stock_trend_llm","type":"Project","properties":{"name":"Stock Trend LLM","status":"active","goals":["collect A-share information","calculate explainable indicators","review simulated decisions","record learning memories for future rule updates"]}}}

@@ -1,0 +1,14 @@
+types:
+  LearningMemory:
+    required: [signal_id, stock_code, outcome, lesson, status]
+    status_enum: [open, reviewed, applied, ignored]
+    outcome_enum: [success, failed, uncertain]
+  ModelRule:
+    required: [name, status, rationale]
+relations:
+  derived_from_signal:
+    from_types: [LearningMemory]
+    to_types: [Signal]
+  proposes_rule_change:
+    from_types: [LearningMemory]
+    to_types: [ModelRule]

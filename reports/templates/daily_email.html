@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #17201d; background: #f5f7f4; }
+    .wrap { max-width: 960px; margin: 0 auto; background: #ffffff; border: 1px solid #dfe6df; }
+    .header { padding: 24px 28px; border-bottom: 3px solid #1d5c4b; }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 28px 0 12px; font-size: 18px; color: #1d5c4b; }
+    .content { padding: 4px 28px 28px; }
+    .muted { color: #66736d; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #edf1ed; text-align: left; vertical-align: top; font-size: 14px; }
+    th { background: #f0f5f2; color: #26352f; }
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 4px; background: #e8f0ed; color: #1d5c4b; font-weight: 600; }
+    .risk { color: #a33b2f; font-weight: 700; }
+    .note { padding: 14px 16px; background: #fff8e6; border-left: 4px solid #c28a19; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>股票 AI 日报 - {{ today }}</h1>
+      <p class="muted">{{ "预计交易日" if is_trading_day else "今日可能不是交易日，以下为简化持仓状态与风险复盘" }}</p>
+    </div>
+    <div class="content">
+      <h2>今日市场概览</h2>
+      <p>{{ market_summary }}</p>
+
+      <h2>今日重点结论</h2>
+      <ul>
+        <li>今日信号 {{ signals|length }} 条，买入候选 {{ buy_candidates|length }} 条，高风险/回避 {{ high_risk|length }} 条。</li>
+        <li>高风险股票不输出强买入建议，仅供观察、回避或持仓风险处理参考。</li>
+      </ul>
+
+      <h2>今日重点关注</h2>
+      <table>
+        <tr><th>股票</th><th>动作</th><th>评分</th><th>置信度</th><th>理由</th></tr>
+        {% for s in focus %}
+        <tr>
+          <td>{{ s.stock_code }} {{ s.stock_name }}</td>
+          <td><span class="badge">{{ s.action }}</span></td>
+          <td>{{ "%.1f"|format(s.overall_score or 0) }}</td>
+          <td>{{ "%.0f"|format(s.confidence or 0) }}/100</td>
+          <td>{{ s.reason }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+
+      <h2>持仓股票建议</h2>
+      <table>
+        <tr><th>股票</th><th>动作</th><th>止损</th><th>止盈</th><th>风险</th></tr>
+        {% for s in holding_actions %}
+        <tr>
+          <td>{{ s.stock_code }} {{ s.stock_name }}</td>
+          <td>{{ s.action }}</td>
+          <td>{{ s.stop_loss_price or "-" }}</td>
+          <td>{{ s.take_profit_price or "-" }}</td>
+          <td class="risk">{{ s.risk_points }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">暂无持仓建议。</td></tr>
+        {% endfor %}
+      </table>
+
+      <h2>自选股买入候选</h2>
+      <table>
+        <tr><th>股票</th><th>建议仓位</th><th>评分</th><th>反向条件</th></tr>
+        {% for s in buy_candidates %}
+        <tr>
+          <td>{{ s.stock_code }} {{ s.stock_name }}</td>
+          <td>{{ s.suggested_position }}</td>
+          <td>{{ "%.1f"|format(s.overall_score or 0) }}</td>
+          <td>{{ s.invalidation_conditions }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">今日无强买入候选。</td></tr>
+        {% endfor %}
+      </table>
+
+      <h2>高风险股票提醒</h2>
+      <table>
+        <tr><th>股票</th><th>动作</th><th>风险点</th></tr>
+        {% for s in high_risk %}
+        <tr>
+          <td>{{ s.stock_code }} {{ s.stock_name }}</td>
+          <td>{{ s.action }}</td>
+          <td class="risk">{{ s.risk_points }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">暂无高风险提醒。</td></tr>
+        {% endfor %}
+      </table>
+
+      <div class="note">{{ disclaimer }}</div>
+    </div>
+  </div>
+</body>
+</html>
