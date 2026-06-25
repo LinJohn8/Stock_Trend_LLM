@@ -27,7 +27,7 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 - Run selectable deterministic analysis algorithms from the dashboard after pulling stock data.
 - Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
-- Start with only two macOS command scripts: local-only or LAN-accessible.
+- Includes macOS command scripts for local-only or LAN-accessible startup.
 
 ## Safety Boundaries
 
@@ -40,18 +40,22 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 
 ## Quick Start
 
-Local-only start:
+Generic Python start:
 
 ```bash
 cp .env.sample .env
-chmod +x local.command LAN.command
-./local.command
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -c "from database.db import init_db; init_db()"
+uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-LAN-accessible start:
+In another terminal:
 
 ```bash
-./LAN.command
+source .venv/bin/activate
+streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
 ```
 
 Open:
@@ -59,10 +63,18 @@ Open:
 - Dashboard: http://localhost:8501
 - API health check: http://localhost:8000/health
 
-You can also double-click either command file in Finder:
+## macOS Command Startup
 
-- `local.command`: binds to `127.0.0.1`, only this Mac can access it.
-- `LAN.command`: binds to `0.0.0.0`, other devices on the same LAN can access it.
+Only macOS uses the command launchers:
+
+```bash
+chmod +x local.command LAN.command
+```
+
+- `local.command`: starts dashboard/API on `127.0.0.1`; only this Mac can access it.
+- `LAN.command`: starts dashboard/API on `0.0.0.0`; devices on the same LAN can access it.
+
+You can double-click either file in Finder, or run it from Terminal.
 
 ## Environment Variables
 

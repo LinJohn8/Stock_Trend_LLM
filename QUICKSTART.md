@@ -17,11 +17,21 @@ Edit `.env` and fill in your own email SMTP authorization code and DeepSeek API 
 
 Do not commit `.env`.
 
-## 3. Local Start
+## 3. Generic Python Start
 
 ```bash
-chmod +x local.command LAN.command
-./local.command
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -c "from database.db import init_db; init_db()"
+uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+In another terminal:
+
+```bash
+source .venv/bin/activate
+streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
 ```
 
 Open:
@@ -29,24 +39,22 @@ Open:
 - Dashboard: http://localhost:8501
 - API health check: http://localhost:8000/health
 
-## 4. LAN Start
+## 4. macOS Command Start
+
+Only macOS uses the command launchers:
 
 ```bash
-./LAN.command
+chmod +x local.command LAN.command
 ```
 
-`LAN.command` prints the LAN URL, usually like:
+- `local.command`: local-only startup.
+- `LAN.command`: LAN-accessible startup.
 
-`http://192.168.x.x:8501`
+You can double-click either file in Finder.
 
-## 5. Local Python Start
+## 5. Manual Dashboard Only
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.sample .env
-python -c "from database.db import init_db; init_db()"
 streamlit run dashboard/streamlit_app.py
 ```
 
@@ -66,7 +74,7 @@ Default sample schedule:
 EMAIL_SEND_TIMES=08:50,14:20
 ```
 
-The scheduler runs in the FastAPI service started by `local.command` or `LAN.command`.
+The scheduler runs in the FastAPI service.
 
 ## 8. Manual Commands
 

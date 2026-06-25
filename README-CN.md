@@ -35,33 +35,45 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 - LLM Skill 查看：在指标、风险、持仓、历史记忆等计算完成后，选择不同 Skill 让 LLM 从保守决策、技术信号、新闻风险、历史错误记忆等角度解释。
 - 算法分析：仪表盘可输入股票代码拉取数据，并勾选趋势、动量、均值回归、估值、资金量价、新闻风险、持仓复核、历史记忆等算法组合运行。
 - Streamlit 仪表盘：首页、自选股、持仓、每日分析、股票详情、模拟复盘、邮件设置、系统设置。
-- 只保留两个 macOS 启动脚本：本机访问和局域网访问。
+- macOS 提供两个启动脚本：本机访问和局域网访问。
 
 ## 安装与启动
 
-本机访问启动：
+通用 Python 启动：
 
 ```bash
 cp .env.sample .env
-chmod +x local.command LAN.command
-./local.command
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -c "from database.db import init_db; init_db()"
+uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-局域网访问启动：
+另开一个终端：
 
 ```bash
-./LAN.command
+source .venv/bin/activate
+streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
 ```
-
-也可以在 Finder 里双击：
-
-- `local.command`：绑定 `127.0.0.1`，只允许本机访问。
-- `LAN.command`：绑定 `0.0.0.0`，允许同一局域网设备访问。
 
 打开：
 
 - 仪表盘：http://localhost:8501
 - API 健康检查：http://localhost:8000/health
+
+## macOS Command 启动
+
+只有 macOS 直接使用这两个启动脚本：
+
+```bash
+chmod +x local.command LAN.command
+```
+
+- `local.command`：绑定 `127.0.0.1`，只允许本机访问。
+- `LAN.command`：绑定 `0.0.0.0`，允许同一局域网设备访问。
+
+可以在 Finder 里双击，也可以在终端里运行。
 
 ## 配置邮箱和 DeepSeek
 
