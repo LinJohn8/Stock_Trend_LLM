@@ -16,6 +16,7 @@ from database.models import AISignal, HistoricalSimulation, SignalTracking
 from services.backtest_service import BacktestService
 from services.historical_simulation_service import HistoricalSimulationService, SimulationConfig
 from services.memory_service import MemoryService
+from services.simulation_preset_service import SimulationPresetService
 from utils.time_utils import now_tz
 
 st.set_page_config(page_title="模拟交易复盘", layout="wide")
@@ -28,10 +29,13 @@ tabs = st.tabs(["历史模拟 + 基准对比", "信号追踪复盘"])
 
 with tabs[0]:
     sim_service = HistoricalSimulationService()
+    preset_service = SimulationPresetService()
     algorithms = sim_service.algorithm_service.list_algorithms()
     default_algorithm_ids = set(sim_service.algorithm_service.default_algorithm_ids())
     categories = ["全部"] + sorted({algo.category for algo in algorithms})
-    algo_map = {f"{algo.name} - {algo.description}": algo.id for algo in algorithms}
+    presets = preset_service.list_presets()
+    preset_options = {"手动选择算法": None}
+    preset_options.update({f"{item.name}{' · 默认' if item.is_default else ''}": item.id for item in presets})
     today = now_tz().date()
     with st.form("historical_simulation_form"):
         c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
@@ -39,28 +43,53 @@ with tabs[0]:
         stock_name = c2.text_input("股票名称", value="")
         start_date = c3.date_input("开始日期", value=today - timedelta(days=240))
         end_date = c4.date_input("结束日期", value=today)
+        preset_label = st.selectbox("算法组", list(preset_options.keys()), help="可以保存一组算法和参数，后续直接复用。")
+        selected_preset = next((item for item in presets if item.id == preset_options[preset_label]), None)
         c5, c6, c7 = st.columns([1, 1, 1])
         initial_cash = c5.number_input("初始资金", min_value=100, max_value=10000000, value=100000, step=1000, help="可以很低，例如 100。若低于一手成本，会展示走势和信号，但不会产生买入交易。")
-        strategy_mode = c6.selectbox("组合模式", ["consensus", "conservative", "aggressive"], format_func=lambda x: {"consensus": "共识模式", "conservative": "保守模式", "aggressive": "积极模式"}[x])
-        benchmark_code = c7.selectbox("对比基准", ["sh000300", "sh000001", "sz399001", "sz399006"], format_func=lambda x: {"sh000300": "沪深300", "sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指"}[x])
+        mode_values = ["consensus", "conservative", "aggressive"]
+        benchmark_values = ["sh000300", "sh000001", "sz399001", "sz399006"]
+        preset_algo_ids = set(preset_service.algorithm_ids(selected_preset)) if selected_preset else set()
+        strategy_mode = c6.selectbox("组合模式", mode_values, index=mode_values.index(selected_preset.strategy_mode) if selected_preset and selected_preset.strategy_mode in mode_values else 0, format_func=lambda x: {"consensus": "共识模式", "conservative": "保守模式", "aggressive": "积极模式"}[x])
+        benchmark_code = c7.selectbox("对比基准", benchmark_values, index=benchmark_values.index(selected_preset.benchmark_code) if selected_preset and selected_preset.benchmark_code in benchmark_values else 0, format_func=lambda x: {"sh000300": "沪深300", "sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指"}[x])
         category_filter = st.selectbox("算法分类筛选", categories, help="算法数量较多时，先按分类过滤再多选。")
         visible_algorithms = algorithms if category_filter == "全部" else [algo for algo in algorithms if algo.category == category_filter]
         algo_map = {f"[{algo.category}] {'★ ' if algo.default else ''}{algo.name} - {algo.description}": algo.id for algo in visible_algorithms[:220]}
-        default_labels = [label for label, algo_id in algo_map.items() if algo_id in default_algorithm_ids]
+        default_source = preset_algo_ids or default_algorithm_ids
+        default_labels = [label for label, algo_id in algo_map.items() if algo_id in default_source]
         selected_labels = st.multiselect(
             "选择算法",
             list(algo_map.keys()),
             default=default_labels,
             help="默认只选强核心算法。可以单选某个算法，也可以按分类组合多个算法；组合不是简单平均，会经过共识、冲突惩罚、硬风控和记忆惩罚。",
         )
-        max_position = st.slider("最大仓位", 0.1, 1.0, 0.85, 0.05, help="模拟中允许算法最多持有多少仓位，用于控制激进程度。")
-        fee_rate = st.number_input("交易费率", min_value=0.0, max_value=0.01, value=0.0003, step=0.0001, format="%.4f", help="买卖时按成交金额扣除的模拟成本。")
+        max_position = st.slider("最大仓位", 0.1, 1.0, float(selected_preset.max_position) if selected_preset else 0.85, 0.05, help="模拟中允许算法最多持有多少仓位，用于控制激进程度。")
+        fee_rate = st.number_input("交易费率", min_value=0.0, max_value=0.01, value=float(selected_preset.fee_rate) if selected_preset else 0.0003, step=0.0001, format="%.4f", help="买卖时按成交金额扣除的模拟成本。")
+        save_cols = st.columns([1.2, 2, 1])
+        preset_name = save_cols[0].text_input("保存为算法组", value="" if not selected_preset else selected_preset.name)
+        preset_desc = save_cols[1].text_input("算法组说明", value="" if not selected_preset else selected_preset.description)
+        save_preset = save_cols[2].checkbox("运行前保存/更新算法组", value=False)
         submitted = st.form_submit_button("运行历史模拟")
 
     if submitted:
         if not selected_labels:
             st.error("请至少选择一个算法。")
         else:
+            selected_algorithm_ids = [algo_map[label] for label in selected_labels]
+            if save_preset:
+                try:
+                    preset_service.save_preset(
+                        name=preset_name,
+                        description=preset_desc,
+                        selected_algorithms=selected_algorithm_ids,
+                        strategy_mode=strategy_mode,
+                        benchmark_code=benchmark_code,
+                        fee_rate=float(fee_rate),
+                        max_position=float(max_position),
+                    )
+                    st.success(f"已保存算法组：{preset_name}")
+                except Exception as exc:
+                    st.warning(f"算法组未保存：{exc}")
             with st.spinner("正在回放历史走势并对比基准..."):
                 result = sim_service.run(
                     SimulationConfig(
@@ -69,7 +98,7 @@ with tabs[0]:
                         start_date=start_date,
                         end_date=end_date,
                         initial_cash=float(initial_cash),
-                        selected_algorithm_ids=[algo_map[label] for label in selected_labels],
+                        selected_algorithm_ids=selected_algorithm_ids,
                         strategy_mode=strategy_mode,
                         benchmark_code=benchmark_code,
                         fee_rate=float(fee_rate),
@@ -122,6 +151,19 @@ with tabs[0]:
                         price_fig.add_trace(go.Scatter(x=blocked_points["date"], y=blocked_points["close"], mode="markers", name="资金不足未成交", marker=dict(color="#a06a16", size=11, symbol="x"), hovertemplate="%{x}<br>资金不足未成交<br>价格 %{y:.2f}<extra></extra>"))
                 price_fig.update_layout(title="股票走势与模拟买卖点")
                 st.plotly_chart(apply_chart_interaction(price_fig, y_title="价格", x_title="日期"), width="stretch", key="simulation_price_trades")
+                projection_df = pd.DataFrame(result.get("price_projection", []))
+                if not projection_df.empty:
+                    projection_fig = go.Figure()
+                    projection_fig.add_trace(go.Scatter(x=projection_df["date"], y=projection_df["actual_close"], mode="lines", name="历史真实走势", line=dict(color="#285f86", width=2)))
+                    projection_fig.add_trace(go.Scatter(x=projection_df["date"], y=projection_df["simulated_close"], mode="lines", name="模拟预测走势", line=dict(color="#a06a16", width=2, dash="dash")))
+                    projection_fig.update_layout(title="历史真实走势 vs 模拟预测走势")
+                    st.plotly_chart(apply_chart_interaction(projection_fig, y_title="价格", x_title="日期"), width="stretch", key="simulation_actual_vs_projection")
+                    error = result["summary"].get("projection_error") or {}
+                    if error.get("available"):
+                        st.info(
+                            f"模拟走势误差：平均绝对偏离 {error['mean_abs_gap']:.2%}，"
+                            f"最大偏离 {error['max_abs_gap']:.2%}，末日偏离 {error['final_gap']:.2%}。"
+                        )
                 render_static_table(curve_df.tail(80).to_dict("records"), ["date", "close", "cash", "shares", "equity", "position", "action", "score", "confidence", "benchmark_return"])
             trade_df = pd.DataFrame(result["trades"])
             st.subheader("交易明细")
@@ -149,6 +191,29 @@ with tabs[0]:
             st.markdown(f"<div class='chat-panel'><div class='chat-answer'>{result.get('ai_review', '暂无复盘')}</div></div>", unsafe_allow_html=True)
 
     st.subheader("历史模拟记录与对比")
+    with st.expander("管理算法组"):
+        preset_rows = [
+            {
+                "ID": item.id,
+                "名称": item.name,
+                "默认": item.is_default,
+                "模式": item.strategy_mode,
+                "基准": item.benchmark_code,
+                "费率": item.fee_rate,
+                "最大仓位": item.max_position,
+                "算法数量": len(preset_service.algorithm_ids(item)),
+                "说明": item.description,
+            }
+            for item in preset_service.list_presets()
+        ]
+        render_static_table(preset_rows, ["ID", "名称", "默认", "模式", "基准", "费率", "最大仓位", "算法数量", "说明"])
+        deletable = [item for item in preset_service.list_presets() if not item.is_default]
+        if deletable:
+            delete_id = st.selectbox("删除非默认算法组", [item.id for item in deletable], format_func=lambda value: next(item.name for item in deletable if item.id == value))
+            if st.button("删除所选算法组"):
+                preset_service.delete_preset(int(delete_id))
+                st.success("已删除算法组。")
+                st.rerun()
     runs = sim_service.list_runs(limit=30)
     if runs:
         run_rows = pd.DataFrame(
@@ -223,6 +288,14 @@ with tabs[0]:
 
         selected_run_id = st.selectbox("查看模拟记录 ID", [item.id for item in runs])
         selected_run = next(item for item in runs if item.id == selected_run_id)
+        saved_projection = pd.DataFrame(json.loads(selected_run.price_projection_json or "[]"))
+        if not saved_projection.empty:
+            st.subheader("保存的真实走势 vs 模拟预测走势")
+            saved_projection_fig = go.Figure()
+            saved_projection_fig.add_trace(go.Scatter(x=saved_projection["date"], y=saved_projection["actual_close"], mode="lines", name="历史真实走势", line=dict(color="#285f86", width=2)))
+            saved_projection_fig.add_trace(go.Scatter(x=saved_projection["date"], y=saved_projection["simulated_close"], mode="lines", name="模拟预测走势", line=dict(color="#a06a16", width=2, dash="dash")))
+            saved_projection_fig.update_layout(title=f"模拟记录 #{selected_run.id} 真实走势 vs 模拟预测走势")
+            st.plotly_chart(apply_chart_interaction(saved_projection_fig, y_title="价格", x_title="日期"), width="stretch", key=f"saved_projection_{selected_run.id}")
         saved_diagnostics = json.loads(selected_run.diagnostics_json or "{}")
         if saved_diagnostics:
             st.subheader("保存的诊断与复盘")
@@ -252,6 +325,7 @@ with tabs[0]:
                     "summary": json.loads(selected_run.summary_json),
                     "selected_algorithms": json.loads(selected_run.selected_algorithms),
                     "trades": json.loads(selected_run.trades_json),
+                    "price_projection": json.loads(selected_run.price_projection_json or "[]")[:10],
                     "diagnostics": saved_diagnostics,
                 }
             )

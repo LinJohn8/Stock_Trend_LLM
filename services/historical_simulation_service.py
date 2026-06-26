@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from sqlalchemy import select
 
@@ -51,7 +52,8 @@ class HistoricalSimulationService:
             raise ValueError("历史行情不足，至少需要约 40 个交易日才能模拟。")
 
         selected_ids = config.selected_algorithm_ids or self.algorithm_service.default_algorithm_ids()
-        algorithms = [algo for algo in self.algorithm_service.list_algorithms() if algo.id in set(selected_ids)]
+        available_algorithms = self.algorithm_service.list_algorithms()
+        algorithms = [algo for algo in available_algorithms if algo.id in set(selected_ids)]
         diagnostics: dict[str, Any] = {
             "data": {
                 "stock_code": code,
@@ -62,7 +64,21 @@ class HistoricalSimulationService:
             },
             "algorithms": {},
             "trade_blockers": [],
+            "selection": {
+                "requested": selected_ids,
+                "available": [algo.id for algo in algorithms],
+                "missing": [algo_id for algo_id in selected_ids if algo_id not in {algo.id for algo in algorithms}],
+            },
         }
+        for missing_id in diagnostics["selection"]["missing"]:
+            diagnostics["algorithms"][missing_id] = {
+                "name": missing_id,
+                "category": "unknown",
+                "status": "error",
+                "warnings": 0,
+                "errors": 1,
+                "examples": [{"date": start_date, "step": "algorithm_selection", "message": "算法 ID 不存在，已从本次模拟中跳过。"}],
+            }
         fundamental = FundamentalService().analyze(code)
         sentiment = SentimentService().analyze(code)
         news_evidence = NewsIngestionService().get_evidence(code, limit=12)
@@ -72,7 +88,10 @@ class HistoricalSimulationService:
         shares = 0
         trades: list[dict[str, Any]] = []
         curve: list[dict[str, Any]] = []
+        projections: list[dict[str, Any]] = []
         prior_equity = cash
+        simulated_price = float(data.iloc[20]["close"])
+        prior_real_price = simulated_price
 
         for index in range(20, len(data)):
             window = data.iloc[: index + 1].copy()
@@ -123,12 +142,30 @@ class HistoricalSimulationService:
             decision = self.algorithm_service.combine_results(results, ctx)
             target_fraction = self._target_fraction(decision, config.strategy_mode, config.max_position)
             price = float(current["close"])
+            simulated_price = self._next_simulated_price(simulated_price, prior_real_price, price, decision, technical, target_fraction)
+            prior_real_price = price
+            projections.append(
+                {
+                    "date": current["date"],
+                    "actual_close": price,
+                    "simulated_close": simulated_price,
+                    "actual_return": price / float(data.iloc[20]["close"]) - 1 if float(data.iloc[20]["close"]) else 0,
+                    "simulated_return": simulated_price / float(data.iloc[20]["close"]) - 1 if float(data.iloc[20]["close"]) else 0,
+                    "score": decision["overall_score"],
+                    "confidence": decision["confidence"],
+                    "action": decision["action"],
+                    "target_fraction": target_fraction,
+                    "gap_pct": simulated_price / price - 1 if price else None,
+                }
+            )
             equity = cash + shares * price
             target_value = equity * target_fraction
             current_value = shares * price
             trade_value = target_value - current_value
+            lot_value = price * 100
+            rebalance_threshold = min(max(1000, equity * 0.02), max(lot_value, equity * 0.02))
 
-            if abs(trade_value) > max(1000, equity * 0.02):
+            if abs(trade_value) > rebalance_threshold:
                 if trade_value > 0:
                     buy_value = min(cash, trade_value)
                     quantity = int(buy_value // (price * 100)) * 100
@@ -189,6 +226,7 @@ class HistoricalSimulationService:
             row["benchmark_return"] = bench_ret
 
         summary = self._summary(curve, trades, config.initial_cash, benchmark)
+        summary["projection_error"] = self._projection_error(projections)
         diagnostics["summary"] = self._diagnostic_summary(diagnostics)
         output = {
             "stock_code": code,
@@ -204,6 +242,7 @@ class HistoricalSimulationService:
             "summary": summary,
             "equity_curve": curve,
             "trades": trades,
+            "price_projection": projections,
             "diagnostics": diagnostics,
             "ai_review": AIAnalysisService().review_simulation(
                 {
@@ -212,6 +251,7 @@ class HistoricalSimulationService:
                     "summary": summary,
                     "diagnostics": diagnostics,
                     "trades": trades[:20],
+                    "projection_error": summary["projection_error"],
                     "selected_algorithms": [algo.id for algo in algorithms],
                 }
             ),
@@ -236,6 +276,7 @@ class HistoricalSimulationService:
                 summary_json=json.dumps(summary, ensure_ascii=False, default=str),
                 equity_curve_json=json.dumps(output["equity_curve"], ensure_ascii=False, default=str),
                 trades_json=json.dumps(output["trades"], ensure_ascii=False, default=str),
+                price_projection_json=json.dumps(output.get("price_projection", []), ensure_ascii=False, default=str),
                 diagnostics_json=json.dumps(output.get("diagnostics", {}), ensure_ascii=False, default=str),
                 ai_review=output.get("ai_review", ""),
                 final_return=summary["final_return"],
@@ -266,16 +307,24 @@ class HistoricalSimulationService:
 
     def _technical_snapshot(self, stock_code: str, df: pd.DataFrame) -> dict[str, Any]:
         close = df["close"].astype(float)
+        high = df["high"].astype(float)
+        low = df["low"].astype(float)
         latest = df.iloc[-1]
-        ma5 = close.rolling(5).mean().iloc[-1]
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma60 = close.rolling(60).mean().iloc[-1] if len(close) >= 60 else None
-        ret5 = _period_return(close, 5)
-        ret20 = _period_return(close, 20)
-        ret60 = _period_return(close, 60)
+        ma_values = {f"ma{window}": _rolling_latest(close, window) for window in [5, 10, 20, 30, 60, 90, 120, 250]}
+        ret_values = {f"ret{days}": _period_return(close, days) for days in [5, 10, 20, 30, 60, 90, 120]}
+        ma5 = ma_values["ma5"]
+        ma20 = ma_values["ma20"]
+        ma60 = ma_values["ma60"]
+        ret5 = ret_values["ret5"]
+        ret20 = ret_values["ret20"]
+        ret60 = ret_values["ret60"]
         volume = df["volume"].astype(float)
         volume_ratio = volume.iloc[-1] / volume.rolling(20).mean().iloc[-1] if len(volume) >= 20 and volume.rolling(20).mean().iloc[-1] else None
         max_drawdown = _max_drawdown(close.tail(60))
+        rsi = _to_float(_rsi(close).iloc[-1]) if len(close) >= 15 else None
+        macd = _to_float(_macd(close).iloc[-1]) if len(close) >= 35 else None
+        atr = _to_float(_atr(high, low, close).iloc[-1]) if len(close) >= 15 else None
+        volatility = _to_float(close.pct_change().rolling(20).std().iloc[-1] * np.sqrt(252)) if len(close) >= 21 else None
         trend_score = 50
         if ma20 and latest["close"] > ma20:
             trend_score += 15
@@ -288,19 +337,18 @@ class HistoricalSimulationService:
             "stock_code": stock_code,
             "date": latest["date"],
             "current_price": float(latest["close"]),
-            "ma5": _to_float(ma5),
-            "ma20": _to_float(ma20),
-            "ma60": _to_float(ma60),
-            "rsi": None,
-            "macd": None,
+            **{key: _to_float(value) for key, value in ma_values.items()},
+            "rsi": rsi,
+            "macd": macd,
+            "atr": atr,
+            "volatility": volatility,
             "volume_ratio": _to_float(volume_ratio),
-            "ret5": ret5,
-            "ret20": ret20,
-            "ret60": ret60,
+            **ret_values,
             "max_drawdown": max_drawdown,
             "trend_score": clamp(trend_score),
             "momentum_score": clamp(momentum_score),
             "risk_score": clamp(70 - (20 if max_drawdown < -0.15 else 0)),
+            "volatility_score": clamp(100 - (volatility or 0) * 100),
             "technical_summary": f"回放日 {latest['date']} 收盘 {latest['close']:.2f}，近20日收益 {ret20:.2%}。",
         }
 
@@ -371,13 +419,56 @@ class HistoricalSimulationService:
             "reason": "；".join(decision.get("notes", [])[:2]),
         }
 
+    def _next_simulated_price(
+        self,
+        previous_simulated: float,
+        previous_actual: float,
+        current_actual: float,
+        decision: dict[str, Any],
+        technical: dict[str, Any],
+        target_fraction: float,
+    ) -> float:
+        real_return = 0 if previous_actual <= 0 else current_actual / previous_actual - 1
+        score_bias = (float(decision.get("overall_score", 50)) - 50) / 1000
+        confidence = float(decision.get("confidence", 50)) / 100
+        trend = float(technical.get("ret20", 0)) * 0.08
+        action_bias = {
+            "buy_candidate": 0.0025,
+            "hold": 0.0015,
+            "watch": 0.0005,
+            "uncertain": 0,
+            "reduce": -0.0015,
+            "sell": -0.0025,
+            "avoid": -0.002,
+        }.get(decision.get("action"), 0)
+        simulated_return = real_return * (0.45 + confidence * 0.25) + score_bias + trend + action_bias + target_fraction * 0.001
+        simulated_return = max(-0.10, min(0.10, simulated_return))
+        return max(0.01, previous_simulated * (1 + simulated_return))
+
+    def _projection_error(self, projections: list[dict[str, Any]]) -> dict[str, Any]:
+        if not projections:
+            return {"available": False}
+        errors = [abs(float(row["gap_pct"])) for row in projections if row.get("gap_pct") is not None]
+        if not errors:
+            return {"available": False}
+        final_gap = projections[-1].get("gap_pct")
+        return {
+            "available": True,
+            "mean_abs_gap": sum(errors) / len(errors),
+            "max_abs_gap": max(errors),
+            "final_gap": final_gap,
+        }
+
     def _record_algorithm_diagnostic(self, diagnostics: dict[str, Any], algo, result: dict[str, Any], run_date) -> None:
         item = diagnostics["algorithms"].setdefault(
             algo.id,
             {"name": algo.name, "category": algo.category, "status": "ok", "warnings": 0, "errors": 0, "examples": []},
         )
         text = "；".join(result.get("reasons", []) + result.get("risks", []))
-        warning_keywords = ["不足", "暂无", "不可得", "执行失败", "缺少"]
+        benign_phrases = ["暂无该股票历史学习记忆", "未记录持仓", "未发现明显均值回归信号"]
+        warning_keywords = ["数据不足", "历史行情不足", "不可得", "执行失败", "缺少", "RSI 数据不足", "均线结构数据不足"]
+        if any(phrase in text for phrase in benign_phrases):
+            return
         if any(keyword in text for keyword in warning_keywords):
             item["warnings"] += 1
             if len(item["examples"]) < 5:
@@ -427,6 +518,37 @@ def _period_return(close: pd.Series, days: int) -> float:
         return 0.0
     base = close.iloc[-days - 1]
     return 0.0 if base == 0 else float((close.iloc[-1] - base) / base)
+
+
+def _rolling_latest(values: pd.Series, window: int) -> float | None:
+    if len(values) < window:
+        return None
+    return _to_float(values.rolling(window).mean().iloc[-1])
+
+
+def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
+    delta = close.diff()
+    gain = delta.clip(lower=0).rolling(period).mean()
+    loss = (-delta.clip(upper=0)).rolling(period).mean()
+    rs = gain / loss.replace(0, np.nan)
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.mask((loss == 0) & (gain > 0), 100)
+    rsi = rsi.mask((loss == 0) & (gain == 0), 50)
+    return rsi
+
+
+def _macd(close: pd.Series) -> pd.Series:
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    dif = ema12 - ema26
+    dea = dif.ewm(span=9, adjust=False).mean()
+    return (dif - dea) * 2
+
+
+def _atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
+    prev_close = close.shift(1)
+    tr = pd.concat([(high - low), (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(axis=1)
+    return tr.rolling(period).mean()
 
 
 def _max_drawdown(close: pd.Series) -> float:

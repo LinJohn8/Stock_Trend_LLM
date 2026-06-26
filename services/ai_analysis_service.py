@@ -80,7 +80,7 @@ class AIAnalysisService:
         try:
             prompt = (
                 "你是一个保守的历史模拟复盘助手。请基于 JSON 输出：模拟结论、交易是否被资金/一手限制阻塞、"
-                "哪些算法有数据或执行问题、哪些结果不可靠、下一步应该检查什么。不要承诺收益。\n\n"
+                "模拟预测走势与历史真实走势的偏差、哪些算法有数据或执行问题、哪些结果不可靠、下一步应该检查什么。不要承诺收益。\n\n"
                 f"上下文 JSON：{json.dumps(context, ensure_ascii=False, default=str)}"
             )
             return self._provider().complete(prompt)
@@ -155,6 +155,7 @@ def _local_stock_chat(question: str, context: dict[str, Any]) -> str:
 def _local_simulation_review(context: dict[str, Any]) -> str:
     summary = context.get("summary") or {}
     diagnostics = context.get("diagnostics") or {}
+    projection_error = context.get("projection_error") or {}
     algos = diagnostics.get("algorithms", {})
     problem_algos = [
         f"{item.get('name', algo_id)}：warnings={item.get('warnings', 0)}, errors={item.get('errors', 0)}"
@@ -167,7 +168,18 @@ def _local_simulation_review(context: dict[str, Any]) -> str:
         f"- 最终收益：{summary.get('final_return', 0):.2%}，基准收益：{summary.get('benchmark_return') if summary.get('benchmark_return') is not None else '-'}，"
         f"最大回撤：{summary.get('max_drawdown', 0):.2%}，交易次数：{summary.get('trade_count', 0)}。\n"
         f"- 数据诊断：{diagnostics.get('data', {})}。\n"
+        f"- 模拟走势误差：{_projection_error_text(projection_error)}\n"
         f"- 算法问题：{'；'.join(problem_algos) if problem_algos else '未发现算法执行错误或明显数据不足。'}\n"
         f"- 交易阻塞：{'；'.join(item.get('message', '') for item in blockers) if blockers else '未记录资金/一手限制阻塞。'}\n"
         "- 解释：如果初始资金低于一手成本，系统仍会展示股票走势与算法信号，但不会产生真实买入交易。"
+    )
+
+
+def _projection_error_text(error: dict[str, Any]) -> str:
+    if not error.get("available"):
+        return "暂无可计算误差。"
+    return (
+        f"平均绝对偏离 {float(error.get('mean_abs_gap', 0)):.2%}，"
+        f"最大偏离 {float(error.get('max_abs_gap', 0)):.2%}，"
+        f"末日偏离 {float(error.get('final_gap', 0)):.2%}。"
     )

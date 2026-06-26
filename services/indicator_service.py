@@ -134,7 +134,10 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
     gain = delta.clip(lower=0).rolling(period).mean()
     loss = (-delta.clip(upper=0)).rolling(period).mean()
     rs = gain / loss.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.mask((loss == 0) & (gain > 0), 100)
+    rsi = rsi.mask((loss == 0) & (gain == 0), 50)
+    return rsi
 
 
 def _macd(close: pd.Series) -> pd.Series:

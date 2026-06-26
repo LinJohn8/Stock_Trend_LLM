@@ -248,6 +248,7 @@ CREATE TABLE IF NOT EXISTS historical_simulations (
     summary_json TEXT,
     equity_curve_json TEXT,
     trades_json TEXT,
+    price_projection_json TEXT,
     diagnostics_json TEXT,
     ai_review TEXT,
     final_return FLOAT,
@@ -255,6 +256,20 @@ CREATE TABLE IF NOT EXISTS historical_simulations (
     max_drawdown FLOAT,
     win_rate FLOAT,
     created_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS simulation_algorithm_presets (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(128) NOT NULL UNIQUE,
+    description TEXT,
+    selected_algorithms TEXT,
+    strategy_mode VARCHAR(32),
+    benchmark_code VARCHAR(32),
+    fee_rate FLOAT,
+    max_position FLOAT,
+    is_default BOOLEAN,
+    created_at DATETIME,
+    updated_at DATETIME
 );
 
 CREATE TABLE IF NOT EXISTS email_logs (

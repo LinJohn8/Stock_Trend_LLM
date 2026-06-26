@@ -52,6 +52,7 @@ def _ensure_sqlite_columns() -> None:
         "historical_simulations": {
             "fee_rate": "FLOAT DEFAULT 0.0003",
             "max_position": "FLOAT DEFAULT 0.85",
+            "price_projection_json": "TEXT DEFAULT '[]'",
             "diagnostics_json": "TEXT DEFAULT '{}'",
             "ai_review": "TEXT DEFAULT ''",
         },

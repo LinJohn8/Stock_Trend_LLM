@@ -300,6 +300,7 @@ class HistoricalSimulation(Base):
     summary_json: Mapped[str] = mapped_column(Text, default="{}")
     equity_curve_json: Mapped[str] = mapped_column(Text, default="[]")
     trades_json: Mapped[str] = mapped_column(Text, default="[]")
+    price_projection_json: Mapped[str] = mapped_column(Text, default="[]")
     diagnostics_json: Mapped[str] = mapped_column(Text, default="{}")
     ai_review: Mapped[str] = mapped_column(Text, default="")
     final_return: Mapped[float] = mapped_column(Float, default=0)
@@ -307,6 +308,23 @@ class HistoricalSimulation(Base):
     max_drawdown: Mapped[float] = mapped_column(Float, default=0)
     win_rate: Mapped[float] = mapped_column(Float, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class SimulationAlgorithmPreset(Base):
+    __tablename__ = "simulation_algorithm_presets"
+    __table_args__ = (UniqueConstraint("name", name="uq_simulation_algorithm_preset_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    selected_algorithms: Mapped[str] = mapped_column(Text, default="[]")
+    strategy_mode: Mapped[str] = mapped_column(String(32), default="consensus")
+    benchmark_code: Mapped[str] = mapped_column(String(32), default="sh000300")
+    fee_rate: Mapped[float] = mapped_column(Float, default=0.0003)
+    max_position: Mapped[float] = mapped_column(Float, default=0.85)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class EmailLog(Base):
