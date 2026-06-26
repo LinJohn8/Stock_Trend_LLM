@@ -1,5 +1,9 @@
 # Stock Trend LLM
 
+<p>
+  <img src="https://count.getloli.com/@stock_trend_llm?theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="Project counter">
+</p>
+
 Stock Trend LLM is a local-first A-share market assistant for collecting stock information, calculating explainable indicators, reviewing watchlists and holdings, generating conservative AI-assisted summaries, sending scheduled email reports, and tracking simulated signal performance.
 
 This is **not** an auto-trading system, a broker integration, or a profit-guarantee tool. It is designed for research, information organization, paper trading review, and human confirmation.
@@ -12,6 +16,7 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 
 Chinese docs: [README-CN.md](README-CN.md)  
 Fast setup: [QUICKSTART.md](QUICKSTART.md)
+License: [MIT](LICENSE)
 
 ## What It Does
 
@@ -25,6 +30,7 @@ Fast setup: [QUICKSTART.md](QUICKSTART.md)
 - Create learning memories from failed or uncertain simulated decisions, including possible causes, evidence snapshots, and proposed rule changes.
 - Run selectable LLM review skills after deterministic calculations, such as conservative decision review, technical signal explanation, news risk checking, and learning-memory review.
 - Run selectable deterministic analysis algorithms from the dashboard after pulling stock data.
+- Collect and score stock news evidence before LLM review.
 - Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
 - Includes macOS command scripts for local-only or LAN-accessible startup.
@@ -48,20 +54,12 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -c "from database.db import init_db; init_db()"
-uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-In another terminal:
-
-```bash
-source .venv/bin/activate
-streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
+streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=9696
 ```
 
 Open:
 
-- Dashboard: http://localhost:8501
-- API health check: http://localhost:8000/health
+- Dashboard: http://localhost:9696
 
 ## macOS Command Startup
 
@@ -114,9 +112,6 @@ RECEIVER_EMAIL=your_receive_email@qq.com
 # Run dashboard
 streamlit run dashboard/streamlit_app.py
 
-# Run FastAPI and scheduler
-uvicorn main:app --host 0.0.0.0 --port 8000
-
 # Run daily analysis manually
 python -m tasks.daily_job
 
@@ -141,10 +136,10 @@ pytest
 
 ## Long-Running Use
 
-Both command scripts start two local processes:
+The dashboard process also starts APScheduler for daily jobs:
 
-- Streamlit dashboard on port `8501`.
-- FastAPI plus APScheduler on port `8000`.
+- Streamlit dashboard on port `9696`.
+- Scheduled daily analysis and email jobs run in the same local process.
 
 The scheduler registers one daily job per configured send time. For example:
 
@@ -203,6 +198,20 @@ Built-in algorithms:
 - Holding review
 - Learning memory
 
+## News Evidence
+
+The news module borrows the multi-source realtime aggregation idea from NewsNow and the RSS/keyword/AI-filtering workflow from TrendRadar, then adapts it to stock research:
+
+1. Fetch stock-related news from AKShare/Eastmoney and RSS-style sources.
+2. De-duplicate articles with a content hash.
+3. Score keyword relevance using stock code, stock name, and custom keywords.
+4. Compute a lightweight semantic-overlap score as a first-version RAG retrieval signal.
+5. Score source credibility, recency, relevance, sentiment, risk keywords, and positive keywords.
+6. Store auditable evidence in `news_articles` and `stock_news_evidence`.
+7. Pass only scored evidence to LLM Skills.
+
+Dashboard page: `新闻情报`.
+
 ## Logs
 
 - `logs/app.log`
@@ -210,6 +219,15 @@ Built-in algorithms:
 - `logs/email.log`
 - `logs/data_fetch.log`
 - `logs/ai_analysis.log`
+
+## Support
+
+If this local research tool helps you, you can support ongoing maintenance with the QR codes below. The dashboard also includes a `支持项目` button in the top-right corner.
+
+<p>
+  <img src="assets/support/support_qr_1.jpg" alt="Support QR code 1" width="220">
+  <img src="assets/support/support_qr_2.jpg" alt="Support QR code 2" width="220">
+</p>
 
 ## Disclaimer
 

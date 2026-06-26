@@ -36,6 +36,7 @@ def get_logger(name: str = "app", filename: str | None = None) -> logging.Logger
         logger.addHandler(file_handler)
 
         console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 

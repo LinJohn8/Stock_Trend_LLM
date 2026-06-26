@@ -100,6 +100,40 @@ CREATE TABLE IF NOT EXISTS stock_fundamentals (
     UNIQUE(stock_code, report_date)
 );
 
+CREATE TABLE IF NOT EXISTS news_articles (
+    id INTEGER PRIMARY KEY,
+    source VARCHAR(64) NOT NULL,
+    title VARCHAR(512),
+    url VARCHAR(1024),
+    published_at DATETIME,
+    content TEXT,
+    summary TEXT,
+    raw_json TEXT,
+    content_hash VARCHAR(64) NOT NULL UNIQUE,
+    source_credibility FLOAT,
+    created_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS stock_news_evidence (
+    id INTEGER PRIMARY KEY,
+    stock_code VARCHAR(16) NOT NULL,
+    stock_name VARCHAR(64),
+    article_id INTEGER NOT NULL,
+    relevance_score FLOAT,
+    keyword_score FLOAT,
+    semantic_score FLOAT,
+    reliability_score FLOAT,
+    sentiment_score FLOAT,
+    matched_keywords TEXT,
+    risk_keywords TEXT,
+    positive_keywords TEXT,
+    event_types TEXT,
+    extracted_entities TEXT,
+    evidence_reason TEXT,
+    created_at DATETIME,
+    UNIQUE(stock_code, article_id)
+);
+
 CREATE TABLE IF NOT EXISTS ai_signals (
     id INTEGER PRIMARY KEY,
     stock_code VARCHAR(16) NOT NULL,
@@ -196,6 +230,30 @@ CREATE TABLE IF NOT EXISTS algorithm_runs (
     overall_score FLOAT,
     action VARCHAR(32),
     confidence FLOAT,
+    created_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS historical_simulations (
+    id INTEGER PRIMARY KEY,
+    stock_code VARCHAR(16) NOT NULL,
+    stock_name VARCHAR(64),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    initial_cash FLOAT,
+    strategy_mode VARCHAR(32),
+    selected_algorithms TEXT,
+    benchmark_code VARCHAR(32),
+    fee_rate FLOAT,
+    max_position FLOAT,
+    summary_json TEXT,
+    equity_curve_json TEXT,
+    trades_json TEXT,
+    diagnostics_json TEXT,
+    ai_review TEXT,
+    final_return FLOAT,
+    benchmark_return FLOAT,
+    max_drawdown FLOAT,
+    win_rate FLOAT,
     created_at DATETIME
 );
 

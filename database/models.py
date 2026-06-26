@@ -48,14 +48,18 @@ class Holding(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     status: Mapped[str] = mapped_column(String(32), default="holding")
 
-    snapshots: Mapped[list["HoldingSnapshot"]] = relationship(back_populates="holding")
+    snapshots: Mapped[list["HoldingSnapshot"]] = relationship(
+        back_populates="holding",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class HoldingSnapshot(Base):
     __tablename__ = "holding_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    holding_id: Mapped[int] = mapped_column(ForeignKey("holdings.id"), index=True)
+    holding_id: Mapped[int] = mapped_column(ForeignKey("holdings.id", ondelete="CASCADE"), index=True)
     stock_code: Mapped[str] = mapped_column(String(16), index=True)
     date: Mapped[date] = mapped_column(Date, index=True)
     current_price: Mapped[float] = mapped_column(Float)
@@ -128,6 +132,45 @@ class StockFundamental(Base):
     gross_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
     debt_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     cash_flow: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class NewsArticle(Base):
+    __tablename__ = "news_articles"
+    __table_args__ = (UniqueConstraint("content_hash", name="uq_news_article_content_hash"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(512), default="")
+    url: Mapped[str] = mapped_column(String(1024), default="")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    content: Mapped[str] = mapped_column(Text, default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    raw_json: Mapped[str] = mapped_column(Text, default="{}")
+    content_hash: Mapped[str] = mapped_column(String(64), index=True)
+    source_credibility: Mapped[float] = mapped_column(Float, default=50)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class StockNewsEvidence(Base):
+    __tablename__ = "stock_news_evidence"
+    __table_args__ = (UniqueConstraint("stock_code", "article_id", name="uq_stock_news_article"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_code: Mapped[str] = mapped_column(String(16), index=True)
+    stock_name: Mapped[str] = mapped_column(String(64), default="")
+    article_id: Mapped[int] = mapped_column(ForeignKey("news_articles.id"), index=True)
+    relevance_score: Mapped[float] = mapped_column(Float, default=0)
+    keyword_score: Mapped[float] = mapped_column(Float, default=0)
+    semantic_score: Mapped[float] = mapped_column(Float, default=0)
+    reliability_score: Mapped[float] = mapped_column(Float, default=0)
+    sentiment_score: Mapped[float] = mapped_column(Float, default=50)
+    matched_keywords: Mapped[str] = mapped_column(Text, default="[]")
+    risk_keywords: Mapped[str] = mapped_column(Text, default="[]")
+    positive_keywords: Mapped[str] = mapped_column(Text, default="[]")
+    event_types: Mapped[str] = mapped_column(Text, default="[]")
+    extracted_entities: Mapped[str] = mapped_column(Text, default="{}")
+    evidence_reason: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
@@ -237,6 +280,32 @@ class AlgorithmRun(Base):
     overall_score: Mapped[float] = mapped_column(Float, default=50)
     action: Mapped[str] = mapped_column(String(32), default="uncertain")
     confidence: Mapped[float] = mapped_column(Float, default=50)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class HistoricalSimulation(Base):
+    __tablename__ = "historical_simulations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_code: Mapped[str] = mapped_column(String(16), index=True)
+    stock_name: Mapped[str] = mapped_column(String(64), default="")
+    start_date: Mapped[date] = mapped_column(Date, index=True)
+    end_date: Mapped[date] = mapped_column(Date, index=True)
+    initial_cash: Mapped[float] = mapped_column(Float, default=100000)
+    strategy_mode: Mapped[str] = mapped_column(String(32), default="consensus")
+    selected_algorithms: Mapped[str] = mapped_column(Text, default="[]")
+    benchmark_code: Mapped[str] = mapped_column(String(32), default="sh000300")
+    fee_rate: Mapped[float] = mapped_column(Float, default=0.0003)
+    max_position: Mapped[float] = mapped_column(Float, default=0.85)
+    summary_json: Mapped[str] = mapped_column(Text, default="{}")
+    equity_curve_json: Mapped[str] = mapped_column(Text, default="[]")
+    trades_json: Mapped[str] = mapped_column(Text, default="[]")
+    diagnostics_json: Mapped[str] = mapped_column(Text, default="{}")
+    ai_review: Mapped[str] = mapped_column(Text, default="")
+    final_return: Mapped[float] = mapped_column(Float, default=0)
+    benchmark_return: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown: Mapped[float] = mapped_column(Float, default=0)
+    win_rate: Mapped[float] = mapped_column(Float, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

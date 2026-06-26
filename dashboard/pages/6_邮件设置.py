@@ -3,11 +3,13 @@ from __future__ import annotations
 import streamlit as st
 
 from config.settings import get_settings
+from dashboard.ui import inject_global_style
 from database.db import init_db
 from services.email_service import EmailService
 
 st.set_page_config(page_title="邮件设置", layout="wide")
 init_db()
+inject_global_style()
 settings = get_settings()
 
 st.title("邮件设置")

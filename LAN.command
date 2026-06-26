@@ -16,16 +16,7 @@ else
   . .venv/bin/activate
 fi
 
-python -c "from database.db import init_db; init_db()"
-
 IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "本机局域网 IP")
-echo "局域网访问地址：http://$IP:8501"
-echo "API 地址：http://$IP:8000"
+echo "局域网访问时，请使用启动输出里的 Dashboard 端口，例如：http://$IP:<端口>"
 
-uvicorn main:app --host 0.0.0.0 --port 8000 &
-API_PID=$!
-trap "kill $API_PID 2>/dev/null || true" EXIT
-
-streamlit run dashboard/streamlit_app.py \
-  --server.address=0.0.0.0 \
-  --server.port=8501
+python -m tasks.start_app --lan

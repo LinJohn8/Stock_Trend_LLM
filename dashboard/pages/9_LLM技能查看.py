@@ -5,11 +5,13 @@ import json
 import pandas as pd
 import streamlit as st
 
+from dashboard.ui import inject_global_style
 from database.db import init_db
 from services.llm_skill_service import LLMReviewSkillService
 
 st.set_page_config(page_title="LLM Skill 查看", layout="wide")
 init_db()
+inject_global_style()
 service = LLMReviewSkillService()
 
 st.title("LLM Skill 查看")
@@ -29,19 +31,19 @@ with right:
     st.subheader("可用 Skill")
     st.dataframe(
         pd.DataFrame([{"Skill": item.name, "ID": item.id, "用途": item.description} for item in skills]),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
 if stock_code:
     if selected_skill is None:
-        if st.button("查看计算结果快照", use_container_width=True):
+        if st.button("查看计算结果快照", width="stretch"):
             with st.spinner("正在读取计算结果..."):
                 context = service.build_computed_context(stock_code, stock_name)
             st.subheader("计算结果快照")
             st.json(context)
     else:
-        if st.button("运行所选 Skill 并保存", use_container_width=True):
+        if st.button("运行所选 Skill 并保存", width="stretch"):
             with st.spinner("正在运行 LLM Skill..."):
                 review = service.run_skill(stock_code, selected_skill, stock_name)
             st.success(f"已保存 Skill Review #{review.id}")
@@ -65,7 +67,7 @@ if reviews:
                 for item in reviews
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     selected_review_id = st.selectbox("查看历史记录 ID", [item.id for item in reviews])

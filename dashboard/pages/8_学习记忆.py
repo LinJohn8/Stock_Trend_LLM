@@ -5,11 +5,13 @@ import json
 import pandas as pd
 import streamlit as st
 
+from dashboard.ui import inject_global_style
 from database.db import init_db
 from services.memory_service import MemoryService
 
 st.set_page_config(page_title="学习记忆", layout="wide")
 init_db()
+inject_global_style()
 service = MemoryService()
 
 
@@ -24,10 +26,10 @@ st.title("学习记忆")
 st.caption("把模拟建议的现实表现、失败原因、证据快照和后续规则修改建议结构化记录下来，供之后更新项目时复盘使用。")
 
 cols = st.columns(4)
-if cols[0].button("生成失败记忆", use_container_width=True):
+if cols[0].button("生成失败记忆", width="stretch"):
     count = service.generate_learning_memories(include_success=False)
     st.success(f"已生成/更新 {count} 条失败或不确定记忆。")
-if cols[1].button("生成全部记忆", use_container_width=True):
+if cols[1].button("生成全部记忆", width="stretch"):
     count = service.generate_learning_memories(include_success=True)
     st.success(f"已生成/更新 {count} 条全部结果记忆。")
 
@@ -58,7 +60,7 @@ if memories:
                 "经验": item.lesson,
             }
         )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     selected_id = st.selectbox("查看/处理记忆 ID", [item.id for item in memories])
     selected = next(item for item in memories if item.id == selected_id)
@@ -74,7 +76,7 @@ if memories:
 
     status_cols = st.columns(4)
     for status, col in zip(["reviewed", "applied", "ignored", "open"], status_cols):
-        if col.button(f"标记 {status}", use_container_width=True):
+        if col.button(f"标记 {status}", width="stretch"):
             service.mark_status(selected_id, status)
             st.success(f"已标记为 {status}。")
 else:

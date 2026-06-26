@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     enable_news_analysis: bool = True
     enable_ai_summary: bool = True
     enable_signal_tracking: bool = True
+    enable_dashboard_scheduler: bool = True
+
+    port_range_start: int = 9690
+    port_range_end: int = 9699
+    api_preferred_port: int = 9690
+    dashboard_preferred_port: int = 9696
 
     technical_weight: float = 0.30
     fundamental_weight: float = 0.25

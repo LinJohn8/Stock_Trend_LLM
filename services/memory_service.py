@@ -82,6 +82,39 @@ class MemoryService:
             "by_action": by_action,
         }
 
+    def decision_adjustment(self, stock_code: str) -> dict:
+        """Summarize open learning memories into deterministic decision adjustments."""
+        with session_scope() as session:
+            memories = list(
+                session.scalars(
+                    select(LearningMemory)
+                    .where(LearningMemory.stock_code == stock_code, LearningMemory.status != "ignored")
+                    .order_by(LearningMemory.created_at.desc())
+                    .limit(20)
+                )
+            )
+        failures = [item for item in memories if item.outcome == "failed"]
+        missed_downside = sum(1 for item in failures if item.error_type == "missed_downside_risk")
+        weak_forward = sum(1 for item in failures if item.error_type == "weak_forward_return")
+        over_conservative = sum(1 for item in failures if item.error_type == "over_conservative_filter")
+        risk_penalty = min(18, missed_downside * 6 + weak_forward * 3)
+        opportunity_credit = min(8, over_conservative * 3)
+        notes = []
+        if missed_downside:
+            notes.append(f"历史记忆显示 {missed_downside} 次低估下跌风险。")
+        if weak_forward:
+            notes.append(f"历史记忆显示 {weak_forward} 次买入/观察后收益偏弱。")
+        if over_conservative:
+            notes.append(f"历史记忆显示 {over_conservative} 次过滤过保守。")
+        return {
+            "memory_count": len(memories),
+            "failure_count": len(failures),
+            "risk_penalty": risk_penalty,
+            "opportunity_credit": opportunity_credit,
+            "net_score_adjustment": opportunity_credit - risk_penalty,
+            "notes": notes,
+        }
+
     def _build_memory(
         self,
         signal: AISignal,

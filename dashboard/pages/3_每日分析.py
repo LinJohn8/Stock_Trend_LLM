@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.ui import inject_global_style
 from database.db import init_db
 from services.report_service import ReportService
 from services.scheduler_service import SchedulerService
@@ -10,6 +11,7 @@ from services.signal_service import SignalService
 
 st.set_page_config(page_title="每日分析", layout="wide")
 init_db()
+inject_global_style()
 
 st.title("每日分析")
 cols = st.columns(3)
@@ -47,7 +49,7 @@ if signals:
                 for s in signals
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 else:

@@ -16,12 +16,4 @@ else
   . .venv/bin/activate
 fi
 
-python -c "from database.db import init_db; init_db()"
-
-uvicorn main:app --host 127.0.0.1 --port 8000 &
-API_PID=$!
-trap "kill $API_PID 2>/dev/null || true" EXIT
-
-streamlit run dashboard/streamlit_app.py \
-  --server.address=127.0.0.1 \
-  --server.port=8501
+python -m tasks.start_app

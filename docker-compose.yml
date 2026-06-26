@@ -12,16 +12,9 @@ x-stock-ai-app: &stock-ai-app
   restart: unless-stopped
 
 services:
-  stock-ai-dashboard:
+  stock-ai-app:
     <<: *stock-ai-app
-    container_name: stock_ai_dashboard
+    container_name: stock_ai_app
     ports:
-      - "8501:8501"
-    command: streamlit run dashboard/streamlit_app.py --server.address=0.0.0.0 --server.port=8501
-
-  stock-ai-api:
-    <<: *stock-ai-app
-    container_name: stock_ai_api
-    ports:
-      - "8000:8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+      - "9690-9699:9690-9699"
+    command: python -m tasks.start_app --lan --no-browser

@@ -13,6 +13,8 @@ from database.models import AISignal, Holding, LearningMemory, StockSkillReview
 from services.ai_analysis_service import AIAnalysisService
 from services.fundamental_service import FundamentalService
 from services.indicator_service import IndicatorService
+from services.memory_service import MemoryService
+from services.news_ingestion_service import NewsIngestionService
 from services.risk_service import RiskService
 from services.sentiment_service import SentimentService
 from services.stock_data_service import StockDataService
@@ -74,10 +76,12 @@ class LLMReviewSkillService:
         technical = IndicatorService().calculate(code)
         fundamental = FundamentalService().analyze(code)
         sentiment = SentimentService().analyze(code)
+        news_evidence = NewsIngestionService().get_evidence(code, limit=12)
         risk = RiskService().evaluate(stock_name, technical, sentiment)
         latest_signal = self._latest_signal(code)
         holding_context = self._holding_context(code)
         memories = self._learning_memories(code)
+        memory_adjustment = MemoryService().decision_adjustment(code)
         return {
             "stock_code": code,
             "stock_name": stock_name or (latest_signal or {}).get("stock_name", ""),
@@ -86,10 +90,12 @@ class LLMReviewSkillService:
             "technical": technical,
             "fundamental": fundamental,
             "sentiment": sentiment,
+            "news_evidence": news_evidence,
             "risk": risk,
             "latest_signal": latest_signal,
             "holding": holding_context,
             "learning_memories": memories,
+            "memory_adjustment": memory_adjustment,
             "boundary": {
                 "no_profit_promise": True,
                 "no_auto_trading": True,

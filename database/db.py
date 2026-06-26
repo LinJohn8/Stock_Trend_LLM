@@ -38,6 +38,30 @@ def init_db() -> None:
     from database import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_sqlite_columns()
+
+
+def _ensure_sqlite_columns() -> None:
+    if not _sqlite_url().startswith("sqlite"):
+        return
+    additions = {
+        "stock_news_evidence": {
+            "event_types": "TEXT DEFAULT '[]'",
+            "extracted_entities": "TEXT DEFAULT '{}'",
+        },
+        "historical_simulations": {
+            "fee_rate": "FLOAT DEFAULT 0.0003",
+            "max_position": "FLOAT DEFAULT 0.85",
+            "diagnostics_json": "TEXT DEFAULT '{}'",
+            "ai_review": "TEXT DEFAULT ''",
+        },
+    }
+    with engine.begin() as conn:
+        for table, columns in additions.items():
+            existing = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()}
+            for column, definition in columns.items():
+                if column not in existing:
+                    conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 @contextmanager

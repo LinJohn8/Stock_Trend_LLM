@@ -6,19 +6,26 @@ from database.db import session_scope
 from database.models import StockFundamental
 from services.stock_data_service import StockDataService
 from utils.math_utils import clamp
+from utils.logger import get_logger
 from utils.stock_utils import normalize_stock_code
+
+logger = get_logger("data_fetch", "data_fetch.log")
 
 
 class FundamentalService:
     def analyze(self, stock_code: str) -> dict:
         code = normalize_stock_code(stock_code)
-        StockDataService().update_fundamentals(code)
-        with session_scope() as session:
-            item = session.scalar(
-                select(StockFundamental)
-                .where(StockFundamental.stock_code == code)
-                .order_by(StockFundamental.report_date.desc())
-            )
+        try:
+            StockDataService().update_fundamentals(code)
+            with session_scope() as session:
+                item = session.scalar(
+                    select(StockFundamental)
+                    .where(StockFundamental.stock_code == code)
+                    .order_by(StockFundamental.report_date.desc())
+                )
+        except Exception as exc:
+            logger.warning("fundamental analysis fallback %s: %s", code, exc)
+            return self._empty()
         if not item:
             return self._empty()
 

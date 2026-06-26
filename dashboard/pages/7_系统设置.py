@@ -3,10 +3,12 @@ from __future__ import annotations
 import streamlit as st
 
 from config.settings import get_settings
+from dashboard.ui import inject_global_style
 from database.db import init_db
 
 st.set_page_config(page_title="系统设置", layout="wide")
 init_db()
+inject_global_style()
 settings = get_settings()
 
 st.title("系统设置")

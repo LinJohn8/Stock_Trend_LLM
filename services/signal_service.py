@@ -10,6 +10,7 @@ from database.db import session_scope
 from database.models import AISignal, SignalTracking
 from services.fundamental_service import FundamentalService
 from services.indicator_service import IndicatorService
+from services.memory_service import MemoryService
 from services.risk_service import RiskService
 from services.sentiment_service import SentimentService
 from utils.math_utils import clamp
@@ -30,6 +31,7 @@ class SignalService:
         fundamental = FundamentalService().analyze(code)
         sentiment = SentimentService().analyze(code)
         risk = RiskService().evaluate(stock_name, technical, sentiment, holding_profit_rate)
+        memory_adjustment = MemoryService().decision_adjustment(code)
 
         capital_score = _capital_score(technical)
         overall = (
@@ -40,8 +42,10 @@ class SignalService:
             + sentiment["news_score"] * settings.news_weight
             + risk["risk_score"] * settings.risk_weight
         )
-        overall = clamp(overall)
+        overall = clamp(overall + memory_adjustment["net_score_adjustment"])
         action = _choose_action(overall, risk["risk_level"], is_holding, holding_profit_rate)
+        if memory_adjustment["risk_penalty"] >= 12 and action == "buy_candidate":
+            action = "watch"
         confidence = _confidence(overall, risk["risk_level"], technical)
         current_price = technical.get("current_price")
         suggested_position = _suggested_position(action, confidence, settings.max_suggested_position, risk["risk_level"])
@@ -53,6 +57,7 @@ class SignalService:
                 technical.get("technical_summary", "技术面不确定"),
                 fundamental.get("fundamental_summary", "基本面不确定"),
                 sentiment.get("news_summary", "消息面不确定"),
+                "；".join(memory_adjustment["notes"]) if memory_adjustment["notes"] else "历史学习记忆暂无明显修正。",
             ]
         )
         invalidation = [
@@ -75,6 +80,7 @@ class SignalService:
             "news_score": sentiment["news_score"],
             "risk_score": risk["risk_score"],
             "risk_level": risk["risk_level"],
+            "memory_adjustment": memory_adjustment,
             "reason": reason,
             "risk_points": risk["risk_points"],
             "invalidation_conditions": invalidation,
@@ -82,7 +88,7 @@ class SignalService:
             "stop_loss_price": stop_loss,
             "take_profit_price": take_profit,
             "ai_model": "rule_based_v1",
-            "raw_ai_response": json.dumps({"technical": technical, "fundamental": fundamental, "sentiment": sentiment, "risk": risk}, ensure_ascii=False, default=str),
+            "raw_ai_response": json.dumps({"technical": technical, "fundamental": fundamental, "sentiment": sentiment, "risk": risk, "memory_adjustment": memory_adjustment}, ensure_ascii=False, default=str),
         }
         if settings.ai_enabled:
             from services.ai_analysis_service import AIAnalysisService

@@ -13,6 +13,7 @@ from services.signal_service import SignalService
 from services.stock_data_service import StockDataService
 from services.backtest_service import BacktestService
 from services.memory_service import MemoryService
+from services.news_ingestion_service import NewsIngestionService
 from utils.logger import get_logger
 
 logger = get_logger("scheduler", "scheduler.log")
@@ -60,6 +61,8 @@ class SchedulerService:
 
             for code, name in codes.items():
                 data_service.update_daily_data(code)
+                if self.settings.enable_news_analysis:
+                    NewsIngestionService().collect_for_stock(code, name, limit=20)
                 holding = next((h for h in holdings if h.stock_code == code), None)
                 profit_rate = None
                 if holding:

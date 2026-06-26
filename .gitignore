@@ -12,3 +12,4 @@ logs/*.log
 reports/generated/*
 !.gitkeep
 .DS_Store
+PROJECT_STATUS_FOR_LLM.md

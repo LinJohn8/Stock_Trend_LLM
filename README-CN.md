@@ -1,5 +1,9 @@
 # Stock Trend LLM / 股票 AI 辅助决策系统
 
+<p>
+  <img src="https://count.getloli.com/@stock_trend_llm_cn?theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="项目计数">
+</p>
+
 这是一个本地优先的中国 A 股信息收集、指标分析、持仓复盘和 AI 辅助解释系统。项目目标不是自动量化交易，也不是荐股软件，而是帮助不太懂股票的人把每天需要看的信息整理清楚：行情、指标、风险、新闻/公告、持仓盈亏、模拟建议表现和邮件日报。
 
 公开仓库：
@@ -9,6 +13,8 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 ```
 
 快速启动见：[QUICKSTART.md](QUICKSTART.md)
+
+开源协议：[MIT](LICENSE)
 
 ## 重要边界
 
@@ -34,6 +40,7 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 - 学习记忆：把模拟建议的错误或不确定结果记录成可审计的复盘条目，包括可能原因、证据快照和后续规则修改建议。
 - LLM Skill 查看：在指标、风险、持仓、历史记忆等计算完成后，选择不同 Skill 让 LLM 从保守决策、技术信号、新闻风险、历史错误记忆等角度解释。
 - 算法分析：仪表盘可输入股票代码拉取数据，并勾选趋势、动量、均值回归、估值、资金量价、新闻风险、持仓复核、历史记忆等算法组合运行。
+- 新闻情报：多源抓取后进行去重、关键词命中、语义近似、来源可信度、时效和情绪评分，再作为 LLM 的证据。
 - Streamlit 仪表盘：首页、自选股、持仓、每日分析、股票详情、模拟复盘、邮件设置、系统设置。
 - macOS 提供两个启动脚本：本机访问和局域网访问。
 
@@ -47,20 +54,12 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -c "from database.db import init_db; init_db()"
-uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-另开一个终端：
-
-```bash
-source .venv/bin/activate
-streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=8501
+streamlit run dashboard/streamlit_app.py --server.address=127.0.0.1 --server.port=9696
 ```
 
 打开：
 
-- 仪表盘：http://localhost:8501
-- API 健康检查：http://localhost:8000/health
+- 仪表盘：http://localhost:9696
 
 ## macOS Command 启动
 
@@ -112,7 +111,7 @@ RECEIVER_EMAIL=your_receive_email@qq.com
 
 ## 每日邮件逻辑
 
-项目长期运行时，FastAPI 服务会启动 APScheduler。
+项目长期运行时，仪表盘进程会启动 APScheduler。
 
 当前默认每天两个时间点：
 
@@ -208,6 +207,29 @@ pytest
 
 这些算法是确定性计算模块，适合先给出可解释的数值和理由；LLM Skill 可以在这些计算之后再做中文解释和复盘。
 
+## 新闻可靠化
+
+新闻模块参考了 NewsNow 的多源实时热点聚合思路，以及 TrendRadar 的多平台聚合、RSS 订阅、关键词筛选、AI 分析简报和推送思路。
+
+本项目落地为更适合股票辅助决策的证据链流程：
+
+1. 多源抓取：AKShare 东方财富个股新闻、RSS/Google News 搜索等。
+2. 去重入库：按 URL、标题和内容生成 `content_hash`。
+3. 相关性评分：股票代码、股票名称、额外关键词命中。
+4. 语义近似：用轻量 token overlap 作为第一版语义相关性，后续可替换为 embedding。
+5. 可信度评分：来源可信度、相关性、时效三者加权。
+6. 情绪与风险：风险关键词、利好关键词、情绪分。
+7. RAG 式证据输入：LLM Skill 只读取已入库、已评分的新闻证据，不直接凭空判断。
+
+相关表：
+
+- `news_articles`
+- `stock_news_evidence`
+
+相关页面：
+
+- `新闻情报`
+
 ## 日志
 
 - `logs/app.log`
@@ -215,6 +237,15 @@ pytest
 - `logs/email.log`
 - `logs/data_fetch.log`
 - `logs/ai_analysis.log`
+
+## 支持项目
+
+如果这个本地股票研究工具帮到了你，可以通过下面两个收款码支持后续维护。仪表盘右上角也提供了 `支持项目` 按钮，点击后会显示同样的二维码。
+
+<p>
+  <img src="assets/support/support_qr_1.jpg" alt="支持收款码 1" width="220">
+  <img src="assets/support/support_qr_2.jpg" alt="支持收款码 2" width="220">
+</p>
 
 ## 后续扩展
 

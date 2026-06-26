@@ -6,7 +6,9 @@ import pandas as pd
 import streamlit as st
 
 from database.db import init_db
+from dashboard.ui import action_tone, badge, inject_global_style, render_hero, render_kpi_grid, render_timeline
 from services.backtest_service import BacktestService
+from services.dashboard_runtime import start_dashboard_runtime
 from services.holding_service import HoldingService
 from services.portfolio_service import PortfolioService
 from services.signal_service import SignalService
@@ -17,24 +19,19 @@ st.set_page_config(page_title="股票 AI 辅助决策系统", layout="wide", pag
 init_db()
 
 
+@st.cache_resource
+def _runtime():
+    return start_dashboard_runtime()
+
+
+_runtime()
+
+
 def inject_style() -> None:
-    st.markdown(
-        """
-        <style>
-        .block-container { padding-top: 1.4rem; max-width: 1440px; }
-        div[data-testid="stMetric"] { background: #f7faf6; border: 1px solid #dfe8df; padding: 14px 16px; border-radius: 6px; }
-        .status-strip { padding: 14px 16px; border-left: 5px solid #1e6b57; background: #eef6f2; margin: 8px 0 18px; }
-        .risk-strip { padding: 14px 16px; border-left: 5px solid #a33b2f; background: #fff3ed; margin: 8px 0 18px; }
-        h1, h2, h3 { letter-spacing: 0; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    inject_global_style()
 
 
 inject_style()
-st.title("股票 AI 辅助决策工作台")
-st.caption("仅用于个人研究、复盘和辅助决策，不构成投资建议。")
 
 portfolio = PortfolioService()
 holding_service = HoldingService()
@@ -52,14 +49,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-cols = st.columns(6)
-cols[0].metric("自选股", len(watchlist))
-cols[1].metric("持仓", len(holdings))
-cols[2].metric("买入候选", buy_count)
-cols[3].metric("减仓/卖出", reduce_count)
-cols[4].metric("高风险", high_risk_count)
 market_score = 50 if not today_signals else round(sum(s.overall_score for s in today_signals) / len(today_signals), 1)
-cols[5].metric("市场/股票池评分", market_score)
+render_hero(
+    "股票 AI 辅助决策工作台",
+    "把行情、新闻证据、算法组合、持仓复盘和学习记忆收束到一个本地工作台。系统只做研究和辅助判断，不进行自动交易。",
+    "Local A-share Intelligence",
+    [
+        (f"{len(watchlist)} 自选", "neutral"),
+        (f"{len(holdings)} 持仓", "buy" if holdings else "neutral"),
+        (f"{market_score} 池评分", "watch" if market_score < 58 else "buy"),
+    ],
+)
+render_kpi_grid(
+    [
+        ("自选股", str(len(watchlist)), "当前启用跟踪", "neutral"),
+        ("持仓", str(len(holdings)), "真实/模拟仓位", "buy" if holdings else "neutral"),
+        ("买入候选", str(buy_count), "今日信号", "buy"),
+        ("减仓/卖出", str(reduce_count), "今日风控", "risk" if reduce_count else "neutral"),
+        ("高风险", str(high_risk_count), "低风险评分或规避动作", "risk" if high_risk_count else "neutral"),
+        ("股票池评分", str(market_score), "今日平均综合分", "watch" if market_score < 58 else "buy"),
+    ]
+)
 
 left, right = st.columns([1.5, 1])
 with left:
@@ -80,21 +90,29 @@ with left:
                     for s in rows
                 ]
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     else:
         st.info("暂无今日信号。可先添加自选股或持仓，然后手动触发每日分析。")
 
 with right:
-    st.subheader("快速操作")
-    if st.button("手动触发每日分析", use_container_width=True):
+    st.markdown("<div class='action-panel'><strong>快速操作</strong><div class='mini-note'>这些动作会拉取数据、刷新信号或更新复盘追踪。</div></div>", unsafe_allow_html=True)
+    if st.button("手动触发每日分析", width="stretch"):
         from services.scheduler_service import SchedulerService
 
-        with st.spinner("正在更新数据并生成分析..."):
+        render_timeline(
+            [
+                ("更新行情", "刷新自选股和持仓的最新日线。"),
+                ("抓取新闻", "收集并评分相关新闻证据。"),
+                ("生成信号", "运行规则、风控和学习记忆修正。"),
+                ("发送日报", "按当前邮件配置生成并发送报告。"),
+            ]
+        )
+        with st.spinner("正在运行完整每日分析..."):
             result = SchedulerService().run_daily_job()
         st.success(f"完成，生成 {len(result)} 条信号。")
-    if st.button("更新复盘追踪", use_container_width=True):
+    if st.button("更新复盘追踪", width="stretch"):
         updated = BacktestService().update_tracking()
         st.success(f"已更新 {updated} 条追踪记录。")
 
@@ -120,8 +138,15 @@ if signals:
                 for s in signals[:50]
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 else:
     st.info("还没有分析记录。")
+
+if signals:
+    st.subheader("信号状态速览")
+    preview = []
+    for signal in signals[:8]:
+        preview.append(badge(f"{signal.stock_code} {signal.action}", action_tone(signal.action)))
+    st.markdown("".join(preview), unsafe_allow_html=True)

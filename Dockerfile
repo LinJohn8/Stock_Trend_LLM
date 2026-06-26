@@ -16,6 +16,6 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 8501 8000
+EXPOSE 9690-9699
 
-CMD ["streamlit", "run", "dashboard/streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["python", "-m", "tasks.start_app", "--lan", "--no-browser"]
