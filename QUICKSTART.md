@@ -67,7 +67,7 @@ Open http://localhost:9696:
 Default sample schedule:
 
 ```env
-EMAIL_SEND_TIMES=08:50,14:20
+EMAIL_SEND_TIMES=08:50,12:50
 ```
 
 The scheduler runs in the dashboard process.

@@ -258,6 +258,23 @@ CREATE TABLE IF NOT EXISTS historical_simulations (
     created_at DATETIME
 );
 
+CREATE TABLE IF NOT EXISTS future_simulation_forecasts (
+    id INTEGER PRIMARY KEY,
+    stock_code VARCHAR(16) NOT NULL,
+    stock_name VARCHAR(64),
+    forecast_start_date DATE NOT NULL,
+    forecast_end_date DATE NOT NULL,
+    horizon_days INTEGER,
+    base_price FLOAT,
+    selected_algorithms TEXT,
+    strategy_mode VARCHAR(32),
+    projection_json TEXT,
+    comparison_json TEXT,
+    summary_json TEXT,
+    diagnostics_json TEXT,
+    created_at DATETIME
+);
+
 CREATE TABLE IF NOT EXISTS simulation_algorithm_presets (
     id INTEGER PRIMARY KEY,
     name VARCHAR(128) NOT NULL UNIQUE,

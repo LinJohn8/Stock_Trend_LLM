@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     timezone: str = "Asia/Shanghai"
 
     email_enabled: bool = True
-    email_send_time: str = Field("08:50,14:20", validation_alias=AliasChoices("EMAIL_SEND_TIMES", "EMAIL_SEND_TIME"))
+    email_send_time: str = Field("08:50,12:50", validation_alias=AliasChoices("EMAIL_SEND_TIMES", "EMAIL_SEND_TIME"))
     email_timezone: str = Field("Asia/Shanghai", validation_alias=AliasChoices("EMAIL_TIMEZONE", "TIMEZONE"))
     email_host: str = Field("smtp.qq.com", validation_alias=AliasChoices("EMAIL_HOST", "SMTP_SERVER"))
     email_port: int = Field(465, validation_alias=AliasChoices("EMAIL_PORT", "SMTP_PORT"))

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pandas as pd
 
 from services.algorithm_service import AnalysisAlgorithm
-from services.historical_simulation_service import SimulationConfig
+from services.historical_simulation_service import FutureForecastConfig, SimulationConfig
 from services.historical_simulation_service import HistoricalSimulationService
 
 
@@ -117,3 +117,37 @@ def test_simulation_outputs_price_projection(monkeypatch) -> None:
     assert len(result["price_projection"]) == len(result["equity_curve"])
     assert result["summary"]["projection_error"]["available"] is True
     assert not any(item.get("errors", 0) for item in result["diagnostics"]["algorithms"].values())
+
+
+def test_future_forecast_outputs_projection(monkeypatch) -> None:
+    service = HistoricalSimulationService()
+    start = date.today() - timedelta(days=120)
+    df = pd.DataFrame(
+        [
+            {
+                "date": start + timedelta(days=idx),
+                "open": 6 + idx * 0.02,
+                "high": 6.2 + idx * 0.02,
+                "low": 5.8 + idx * 0.02,
+                "close": 6 + idx * 0.02,
+                "volume": 2_000_000,
+                "amount": 12_000_000,
+                "turnover_rate": 1.0,
+                "pct_change": 0.1,
+            }
+            for idx in range(100)
+        ]
+    )
+    monkeypatch.setattr(service, "_load_recent_stock_data", lambda *args, **kwargs: df)
+    class Saved:
+        id = 123
+
+    monkeypatch.setattr(service, "save_future_forecast", lambda output: Saved())
+
+    result = service.forecast_future(FutureForecastConfig(stock_code="000560", horizon_days=10))
+
+    assert len(result["projection"]) == 10
+    assert result["summary"]["available"] is True
+    assert result["summary"]["final_forecast_return"] == result["projection"][-1]["forecast_return"]
+    assert result["forecast_start_date"] < result["forecast_end_date"]
+    assert result["forecast_id"] == 123

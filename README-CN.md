@@ -35,7 +35,7 @@ git clone https://github.com/LinJohn8/Stock_Trend_LLM.git
 - 风险控制：ST、跌破 MA20、跌破 MA60、放量下跌、短期涨幅过大、成交量不足、负面关键词、止损/止盈阈值。
 - 综合评分：技术面、基本面、估值、资金面、消息面、风险控制。
 - AI 分析：支持 DeepSeek/OpenAI/GLM 风格 Provider，默认可关闭，规则引擎仍可运行。
-- 邮件日报：支持多个发送时间，当前配置为早上 `08:50` 和下午 `14:20`。
+- 邮件日报：支持多个发送时间，当前配置为早上 `08:50` 和中午 `12:50`。
 - 模拟复盘：保存每条建议，追踪未来 1/5/20/60 日收益和最大回撤。
 - 学习记忆：把模拟建议的错误或不确定结果记录成可审计的复盘条目，包括可能原因、证据快照和后续规则修改建议。
 - LLM Skill 查看：在指标、风险、持仓、历史记忆等计算完成后，选择不同 Skill 让 LLM 从保守决策、技术信号、新闻风险、历史错误记忆等角度解释。
@@ -82,7 +82,7 @@ chmod +x local.command LAN.command
 
 ```env
 EMAIL_ENABLED=true
-EMAIL_SEND_TIMES=08:50,14:20
+EMAIL_SEND_TIMES=08:50,12:50
 EMAIL_TIMEZONE=Asia/Shanghai
 EMAIL_HOST=smtp.qq.com
 EMAIL_PORT=465
@@ -116,7 +116,7 @@ RECEIVER_EMAIL=your_receive_email@qq.com
 当前默认每天两个时间点：
 
 - 08:50
-- 14:20
+- 12:50
 
 邮件只汇总当前项目里仍处于 active 状态的自选股和 active 持仓。已暂停跟踪的股票不会进入日报筛选。
 

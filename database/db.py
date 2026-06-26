@@ -56,6 +56,10 @@ def _ensure_sqlite_columns() -> None:
             "diagnostics_json": "TEXT DEFAULT '{}'",
             "ai_review": "TEXT DEFAULT ''",
         },
+        "future_simulation_forecasts": {
+            "comparison_json": "TEXT DEFAULT '[]'",
+            "diagnostics_json": "TEXT DEFAULT '{}'",
+        },
     }
     with engine.begin() as conn:
         for table, columns in additions.items():

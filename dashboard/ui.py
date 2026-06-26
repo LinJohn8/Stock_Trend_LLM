@@ -72,6 +72,65 @@ def inject_global_style() -> None:
             box-shadow: 0 10px 22px rgba(31, 111, 88, 0.14);
             border-color: var(--green);
         }
+        .stButton > button[kind="primary"],
+        .stButton > button[data-testid="baseButton-primary"] {
+            background:
+                linear-gradient(135deg, #173f32 0%, #1a6f55 58%, #b86f3d 100%);
+            border-color: rgba(255,255,255,.36);
+            color: #f8fbf3;
+            box-shadow: 0 16px 34px rgba(26,111,85,.22);
+        }
+        div[data-testid="stForm"] {
+            border: 1px solid rgba(215,227,212,.92);
+            border-radius: 20px;
+            padding: 16px 18px 18px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.86), rgba(242,248,237,.76)),
+                repeating-linear-gradient(135deg, rgba(26,111,85,.028) 0 1px, transparent 1px 14px);
+            box-shadow: 0 18px 42px rgba(37,53,45,.08);
+        }
+        div[data-testid="stExpander"] {
+            border: 1px solid rgba(215,227,212,.96);
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(255,255,255,.72);
+            box-shadow: 0 16px 38px rgba(37,53,45,.075);
+        }
+        div[data-testid="stExpander"] details summary {
+            background:
+                linear-gradient(90deg, rgba(238,245,234,.94), rgba(255,255,255,.82)),
+                repeating-linear-gradient(90deg, rgba(26,111,85,.035) 0 1px, transparent 1px 12px);
+            font-weight: 850;
+            color: #173f32;
+        }
+        div[data-testid="stExpander"] details[open] summary {
+            border-bottom: 1px solid var(--line);
+        }
+        div[data-testid="stTabs"] button {
+            border-radius: 999px;
+            font-weight: 800;
+            color: #405249;
+        }
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            background: #173f32;
+            color: #f8fbf3;
+        }
+        div[data-baseweb="input"] > div,
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="textarea"] textarea,
+        div[data-baseweb="base-input"] input {
+            border-radius: 12px !important;
+            border-color: #bfd1c2 !important;
+            background: rgba(255,255,255,.84) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+        }
+        div[data-testid="stDataFrame"] {
+            border: 1px solid rgba(215,227,212,.82);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 14px 34px rgba(37,53,45,.07);
+        }
+        iframe { border: 0; }
         .status-strip, .action-panel, .decision-card, .timeline, .hero-panel, .kpi-card, .insight-card, .query-ribbon, .smart-table-wrap, .link-card, .loading-panel, .chat-panel {
             border: 1px solid var(--line);
             border-radius: 16px;
@@ -237,18 +296,126 @@ def inject_global_style() -> None:
         }
         .chat-panel { padding: 14px 16px; margin: 10px 0; border-left: 4px solid var(--copper); }
         .chat-answer { white-space: pre-wrap; line-height: 1.7; color: #26352d; }
+        .section-shell {
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.82), rgba(242,248,237,.72)),
+                radial-gradient(circle at 100% 0%, rgba(184,111,61,.14), transparent 28%);
+            box-shadow: 0 16px 38px rgba(37,53,45,.075);
+        }
+        .section-shell:before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            border-radius: 18px 0 0 18px;
+            background: linear-gradient(180deg, var(--green), var(--copper));
+        }
+        .section-kicker {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--muted);
+            font-size: 11px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+        .section-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--ink);
+            margin: 4px 0 4px;
+        }
+        .section-copy {
+            color: var(--muted);
+            line-height: 1.62;
+            font-size: 13px;
+        }
+        .dock-panel {
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 14px;
+            margin-bottom: 12px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.9), rgba(241,248,237,.84)),
+                repeating-linear-gradient(135deg, rgba(26,111,85,.032) 0 1px, transparent 1px 12px);
+            box-shadow: 0 22px 48px rgba(37,53,45,.12);
+        }
+        .dock-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 18px;
+            font-weight: 850;
+            color: #173f32;
+            margin-bottom: 4px;
+        }
+        .dock-note {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
+            margin-bottom: 10px;
+        }
+        .copy-hub {
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 12px;
+            margin: 0;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.94), rgba(241,248,237,.88)),
+                repeating-linear-gradient(135deg, rgba(26,111,85,.035) 0 1px, transparent 1px 12px);
+            box-shadow: 0 22px 48px rgba(37,53,45,.13);
+            backdrop-filter: blur(16px);
+        }
+        div.st-key-workbench_copy_hub {
+            position: sticky;
+            top: 86px;
+            z-index: 18;
+            margin-bottom: 12px;
+        }
+        .copy-hub-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 850;
+            color: #173f32;
+            margin-bottom: 4px;
+        }
+        .copy-hub-pill {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #d6e1d8;
+            border-radius: 999px;
+            padding: 3px 8px;
+            background: #eef5ea;
+            color: var(--muted);
+            font-family: 'IBM Plex Sans', 'PingFang SC', sans-serif;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .copy-hub .mini-note { margin-bottom: 10px; }
+        .copy-button-frame {
+            width: 100%;
+            border: 0;
+            display: block;
+            margin: 0 0 8px;
+        }
         .support-toggle-input { display: none; }
         .support-fab {
             position: fixed;
             z-index: 9998;
-            top: 14px;
-            right: 18px;
+            top: 52px;
+            right: 22px;
             display: inline-flex;
             align-items: center;
             gap: 7px;
             border: 1px solid rgba(255,255,255,.38);
             border-radius: 999px;
-            padding: 9px 13px;
+            padding: 10px 15px;
             background:
                 linear-gradient(135deg, rgba(25,35,31,.94), rgba(26,111,85,.9)),
                 repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 1px, transparent 1px 10px);
@@ -269,7 +436,7 @@ def inject_global_style() -> None:
             position: fixed;
             z-index: 9999;
             inset: 0;
-            padding: 80px 18px 24px;
+            padding: 104px 18px 24px;
             background:
                 radial-gradient(circle at 82% 18%, rgba(184,111,61,.24), transparent 22%),
                 rgba(20, 29, 25, .54);
@@ -346,31 +513,112 @@ def inject_global_style() -> None:
             font-size: 13px;
             font-weight: 800;
         }
+        .support-paypal {
+            display: block;
+            margin: 0 22px 22px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #f7efe4;
+            color: #173f32;
+            border: 1px solid #e4cdb5;
+            font-weight: 900;
+            text-align: center;
+            text-decoration: none;
+        }
+        .support-paypal:hover { color: var(--blue); text-decoration: underline; }
+        .support-public-note {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 10px 13px;
+            margin: 4px 0 16px;
+            background: rgba(255,255,255,.72);
+            box-shadow: 0 12px 28px rgba(37,53,45,.07);
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .support-public-note a { color: #173f32; font-weight: 850; text-decoration: none; }
+        .support-public-note a:hover { color: var(--blue); text-decoration: underline; }
+        .page-nav {
+            position: sticky;
+            top: 6px;
+            z-index: 20;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 12px;
+            margin: 8px 0 16px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255,255,255,.82);
+            box-shadow: 0 14px 32px rgba(37,53,45,.08);
+            backdrop-filter: blur(14px);
+        }
+        .page-nav a {
+            color: #173f32;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 850;
+            padding: 6px 9px;
+            border-radius: 999px;
+            background: #eef5ea;
+            border: 1px solid #d6e1d8;
+        }
+        .page-nav a:hover { color: var(--blue); background: #f7efe4; border-color: #e4cdb5; }
+        .page-nav a:focus-visible,
+        .support-fab:focus-visible,
+        .support-close:focus-visible {
+            outline: 3px solid rgba(26,111,85,.24);
+            outline-offset: 2px;
+        }
+        .anchor-target { scroll-margin-top: 92px; }
         @media (max-width: 900px) {
             .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .hero-title { font-size: 24px; }
             .hero-panel { padding: 20px; }
-            .support-fab { top: 10px; right: 10px; padding: 8px 11px; }
+            .support-fab { top: 48px; right: 10px; padding: 8px 11px; }
             .support-qr-grid { grid-template-columns: 1fr; }
+            div.st-key-workbench_copy_hub { position: static; }
+            .page-nav { top: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *:before, *:after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                scroll-behavior: auto !important;
+                transition-duration: .01ms !important;
+            }
         }
         </style>
         <input id="stock-support-toggle" class="support-toggle-input" type="checkbox" />
-        <label for="stock-support-toggle" class="support-fab">支持项目</label>
+        <label for="stock-support-toggle" class="support-fab">支持 / Support</label>
         <div class="support-backdrop">
             <div class="support-modal">
                 <div class="support-modal-head">
                     <div>
                         <div class="support-modal-title">支持 Stock Trend LLM</div>
-                        <div class="support-modal-note">如果这个本地股票研究工具帮到了你，可以通过下面的收款码支持后续维护。感谢每一次认真反馈和支持。</div>
+                        <div class="support-modal-note">如果这个本地股票研究工具帮到了你，可以通过下面的收款码或 PayPal 支持后续维护。感谢每一次认真反馈和支持。</div>
                     </div>
                     <label for="stock-support-toggle" class="support-close">x</label>
                 </div>
                 <div class="support-qr-grid">__SUPPORT_CARDS__</div>
+                <a class="support-paypal" href="https://www.paypal.com/paypalme/HWSLandDFTX8" target="_blank" rel="noopener noreferrer">PayPal 支持：paypal.me/HWSLandDFTX8</a>
             </div>
         </div>
         """.replace("__SUPPORT_CARDS__", support_cards)
     st.markdown(
         html,
+        unsafe_allow_html=True,
+    )
+    render_support_notice()
+
+
+def render_support_notice() -> None:
+    st.markdown(
+        "<div class='support-public-note'>"
+        "<strong>公共说明：</strong>页面右上角有 <strong>支持 / Support</strong> 按钮，点击可查看两个支持收款码；也可使用 "
+        "<a href='https://www.paypal.com/paypalme/HWSLandDFTX8' target='_blank' rel='noopener noreferrer'>PayPal</a> 支持项目维护。"
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -471,6 +719,36 @@ def render_timeline(steps: Iterable[tuple[str, str]]) -> None:
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
+def render_page_nav(items: Iterable[tuple[str, str]]) -> None:
+    links = "".join(f"<a href='#{escape(anchor)}'>{escape(label)}</a>" for label, anchor in items)
+    st.markdown(f"<div class='page-nav'>{links}</div>", unsafe_allow_html=True)
+
+
+def render_anchor(anchor: str) -> None:
+    st.markdown(f"<span id='{escape(anchor)}' class='anchor-target'></span>", unsafe_allow_html=True)
+
+
+def render_section_shell(title: str, detail: str, kicker: str = "Workspace Section") -> None:
+    st.markdown(
+        "<div class='section-shell'>"
+        f"<div class='section-kicker'>{escape(kicker)}</div>"
+        f"<div class='section-title'>{escape(title)}</div>"
+        f"<div class='section-copy'>{escape(detail)}</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_dock_panel(title: str, detail: str) -> None:
+    st.markdown(
+        "<div class='dock-panel'>"
+        f"<div class='dock-title'>{escape(title)}</div>"
+        f"<div class='dock-note'>{escape(detail)}</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def render_loading_panel(title: str, detail: str = "正在处理，请稍候...") -> None:
     st.markdown(
         "<div class='loading-panel'>"
@@ -523,51 +801,76 @@ def render_link_card(title: str, url: str, meta: str = "", tone: str = "neutral"
 
 def render_copy_button(label: str, text: str, key: str, helper: str = "") -> None:
     safe_key = "".join(ch if ch.isalnum() else "_" for ch in key)
-    payload_id = f"copy_payload_{safe_key}"
+    payload = (text or "").replace("</textarea", "<\\/textarea")
     button_id = f"copy_button_{safe_key}"
+    payload_id = f"copy_payload_{safe_key}"
     status_id = f"copy_status_{safe_key}"
-    st.markdown(
-        f"""
-        <div class='decision-card'>
-            <textarea id='{payload_id}' style='position:absolute; left:-9999px;'>{escape(text or "")}</textarea>
-            <button id='{button_id}' style='
-                border:1px solid #bfd1c2;
-                border-radius:10px;
-                padding:8px 12px;
-                background:#f8fbf3;
-                color:#173f32;
-                font-weight:800;
-                cursor:pointer;
-            '>{escape(label)}</button>
-            <span id='{status_id}' class='mini-note' style='margin-left:8px;'>{escape(helper)}</span>
+    copy_html = f"""
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </head>
+        <body style="margin:0;">
+        <div style="
+            font-family: IBM Plex Sans, PingFang SC, sans-serif;
+            border:1px solid rgba(215,227,212,.9);
+            border-radius:14px;
+            padding:7px 8px;
+            background:rgba(255,255,255,.72);
+            box-shadow:0 10px 22px rgba(37,53,45,.07);
+        ">
+          <textarea id="{payload_id}" style="position:absolute;left:-9999px;top:-9999px;">{escape(payload)}</textarea>
+          <button id="{button_id}" style="
+              border:1px solid #bfd1c2;
+              border-radius:10px;
+              padding:8px 12px;
+              background:#f8fbf3;
+              color:#173f32;
+              font-weight:800;
+              cursor:pointer;
+              box-shadow:0 8px 18px rgba(37,53,45,.08);
+          ">{escape(label)}</button>
+          <span id="{status_id}" style="margin-left:8px;color:#647369;font-size:13px;">{escape(helper)}</span>
         </div>
         <script>
-        (function() {{
-            const btn = document.getElementById("{button_id}");
-            const payload = document.getElementById("{payload_id}");
-            const status = document.getElementById("{status_id}");
-            if (!btn || !payload || btn.dataset.bound === "1") return;
-            btn.dataset.bound = "1";
-            btn.addEventListener("click", async function() {{
-                const text = payload.value;
-                try {{
-                    await navigator.clipboard.writeText(text);
-                    status.textContent = "已复制";
-                }} catch (err) {{
-                    payload.style.position = "fixed";
-                    payload.style.left = "0";
-                    payload.select();
-                    document.execCommand("copy");
-                    payload.style.position = "absolute";
-                    payload.style.left = "-9999px";
-                    status.textContent = "已复制";
-                }}
-                setTimeout(function() {{ status.textContent = "{escape(helper)}"; }}, 1600);
-            }});
-        }})();
+        const btn = document.getElementById("{button_id}");
+        const payload = document.getElementById("{payload_id}");
+        const status = document.getElementById("{status_id}");
+        btn.addEventListener("click", async () => {{
+          const text = payload.value;
+          let ok = false;
+          try {{
+            if (navigator.clipboard && window.isSecureContext) {{
+              await navigator.clipboard.writeText(text);
+              ok = true;
+            }}
+          }} catch (err) {{}}
+          if (!ok) {{
+            payload.style.position = "fixed";
+            payload.style.left = "8px";
+            payload.style.top = "8px";
+            payload.style.width = "1px";
+            payload.style.height = "1px";
+            payload.focus();
+            payload.select();
+            try {{ ok = document.execCommand("copy"); }} catch (err) {{ ok = false; }}
+            payload.style.position = "absolute";
+            payload.style.left = "-9999px";
+            payload.style.top = "-9999px";
+          }}
+          status.textContent = ok ? "已复制" : "复制失败，请选中文本手动复制";
+          setTimeout(() => {{ status.textContent = "{escape(helper)}"; }}, 1800);
+        }});
         </script>
-        """,
-        unsafe_allow_html=True,
+        </body>
+        </html>
+        """
+    data_url = "data:text/html;charset=utf-8;base64," + base64.b64encode(copy_html.encode("utf-8")).decode("ascii")
+    st.iframe(
+        data_url,
+        height=58,
     )
 
 
@@ -607,7 +910,9 @@ def apply_chart_interaction(fig, *, y_title: str = "价格", x_title: str = "时
     )
     for trace in fig.data:
         if getattr(trace, "type", "") == "scatter":
-            trace.update(mode="lines+markers", marker=dict(size=5))
+            mode = getattr(trace, "mode", None) or ""
+            if "lines" in mode or not mode:
+                trace.update(mode="lines+markers", marker=dict(size=5))
         elif getattr(trace, "type", "") == "bar":
             trace.update(hovertemplate="%{x}<br>%{y:,.2f}<extra>%{fullData.name}</extra>")
         elif getattr(trace, "type", "") == "candlestick":

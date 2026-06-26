@@ -310,6 +310,25 @@ class HistoricalSimulation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class FutureSimulationForecast(Base):
+    __tablename__ = "future_simulation_forecasts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_code: Mapped[str] = mapped_column(String(16), index=True)
+    stock_name: Mapped[str] = mapped_column(String(64), default="")
+    forecast_start_date: Mapped[date] = mapped_column(Date, index=True)
+    forecast_end_date: Mapped[date] = mapped_column(Date, index=True)
+    horizon_days: Mapped[int] = mapped_column(Integer, default=20)
+    base_price: Mapped[float] = mapped_column(Float, default=0)
+    selected_algorithms: Mapped[str] = mapped_column(Text, default="[]")
+    strategy_mode: Mapped[str] = mapped_column(String(32), default="consensus")
+    projection_json: Mapped[str] = mapped_column(Text, default="[]")
+    comparison_json: Mapped[str] = mapped_column(Text, default="[]")
+    summary_json: Mapped[str] = mapped_column(Text, default="{}")
+    diagnostics_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class SimulationAlgorithmPreset(Base):
     __tablename__ = "simulation_algorithm_presets"
     __table_args__ = (UniqueConstraint("name", name="uq_simulation_algorithm_preset_name"),)

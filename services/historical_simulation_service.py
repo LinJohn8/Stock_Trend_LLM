@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from data_sources.index_client import IndexClient
 from database.db import session_scope
-from database.models import HistoricalSimulation
+from database.models import FutureSimulationForecast, HistoricalSimulation
 from services.ai_analysis_service import AIAnalysisService
 from services.algorithm_service import AlgorithmService
 from services.fundamental_service import FundamentalService
@@ -34,6 +34,16 @@ class SimulationConfig:
     strategy_mode: str = "consensus"
     benchmark_code: str = "sh000300"
     fee_rate: float = 0.0003
+    max_position: float = 0.85
+
+
+@dataclass(frozen=True)
+class FutureForecastConfig:
+    stock_code: str
+    stock_name: str = ""
+    horizon_days: int = 20
+    selected_algorithm_ids: list[str] | None = None
+    strategy_mode: str = "consensus"
     max_position: float = 0.85
 
 
@@ -111,34 +121,7 @@ class HistoricalSimulationService:
                 "memories": memories,
             }
             results = []
-            for algo in algorithms:
-                try:
-                    raw = algo.runner(ctx)
-                    normalized = self.algorithm_service._normalize_result(raw, algo)
-                    results.append(normalized)
-                    self._record_algorithm_diagnostic(diagnostics, algo, normalized, current["date"])
-                except Exception as exc:
-                    diagnostics["algorithms"].setdefault(
-                        algo.id,
-                        {"name": algo.name, "category": algo.category, "status": "error", "warnings": 0, "errors": 0, "examples": []},
-                    )
-                    diagnostics["algorithms"][algo.id]["errors"] += 1
-                    diagnostics["algorithms"][algo.id]["examples"].append(
-                        {"date": current["date"], "step": "algorithm_runner", "message": str(exc)}
-                    )
-                    results.append(
-                        self.algorithm_service._normalize_result(
-                            {
-                                "score": 50,
-                                "view": algo.category,
-                                "direction": "neutral",
-                                "position_bias": 0,
-                                "reasons": [f"算法执行失败，已按中性处理：{exc}"],
-                                "risks": ["该算法在本次模拟中出现异常，需要检查数据或参数。"],
-                            },
-                            algo,
-                        )
-                    )
+            results = self._run_algorithms_for_simulation(algorithms, ctx, diagnostics, current["date"])
             decision = self.algorithm_service.combine_results(results, ctx)
             target_fraction = self._target_fraction(decision, config.strategy_mode, config.max_position)
             price = float(current["close"])
@@ -296,6 +279,159 @@ class HistoricalSimulationService:
                 stmt = stmt.where(HistoricalSimulation.stock_code == normalize_stock_code(stock_code))
             return list(session.scalars(stmt).all())
 
+    def forecast_future(self, config: FutureForecastConfig) -> dict[str, Any]:
+        code = normalize_stock_code(config.stock_code)
+        horizon = max(1, min(int(config.horizon_days), 120))
+        data = self._load_recent_stock_data(code, min_rows=90)
+        if len(data) < 40:
+            raise ValueError("历史行情不足，至少需要约 40 个交易日才能做未来趋势预测。")
+
+        selected_ids = config.selected_algorithm_ids or self.algorithm_service.default_algorithm_ids()
+        available_algorithms = self.algorithm_service.list_algorithms()
+        algorithms = [algo for algo in available_algorithms if algo.id in set(selected_ids)]
+        diagnostics: dict[str, Any] = {
+            "data": {
+                "stock_code": code,
+                "rows": len(data),
+                "last_date": data.iloc[-1]["date"],
+                "status": "ok",
+            },
+            "algorithms": {},
+            "selection": {
+                "requested": selected_ids,
+                "available": [algo.id for algo in algorithms],
+                "missing": [algo_id for algo_id in selected_ids if algo_id not in {algo.id for algo in algorithms}],
+            },
+        }
+
+        fundamental = FundamentalService().analyze(code)
+        sentiment = SentimentService().analyze(code)
+        news_evidence = NewsIngestionService().get_evidence(code, limit=12)
+        memories = self.algorithm_service._memories(code)
+        base_price = float(data.iloc[-1]["close"])
+        simulated_price = base_price
+        prior_price = float(data.iloc[-2]["close"]) if len(data) >= 2 else base_price
+        forecast_rows: list[dict[str, Any]] = []
+        working = data.copy()
+
+        for step in range(1, horizon + 1):
+            forecast_date = self._future_market_date(data.iloc[-1]["date"], step)
+            technical = self._technical_snapshot(code, working)
+            risk = RiskService().evaluate(config.stock_name, technical, sentiment)
+            ctx = {
+                "stock_code": code,
+                "stock_name": config.stock_name,
+                "technical": technical,
+                "fundamental": fundamental,
+                "sentiment": sentiment,
+                "news_evidence": news_evidence,
+                "risk": risk,
+                "daily": working,
+                "holding": None,
+                "memories": memories,
+            }
+            results = self._run_algorithms_for_simulation(algorithms, ctx, diagnostics, forecast_date)
+            decision = self.algorithm_service.combine_results(results, ctx)
+            target_fraction = self._target_fraction(decision, config.strategy_mode, config.max_position)
+            simulated_price = self._next_simulated_price(simulated_price, prior_price, simulated_price, decision, technical, target_fraction)
+            forecast_rows.append(
+                {
+                    "date": forecast_date,
+                    "step": step,
+                    "base_price": base_price,
+                    "forecast_price": simulated_price,
+                    "forecast_return": simulated_price / base_price - 1 if base_price else 0,
+                    "score": decision["overall_score"],
+                    "confidence": decision["confidence"],
+                    "action": decision["action"],
+                    "target_fraction": target_fraction,
+                }
+            )
+            prior_price = simulated_price
+            working = pd.concat(
+                [
+                    working,
+                    pd.DataFrame(
+                        [
+                            {
+                                "date": forecast_date,
+                                "open": simulated_price,
+                                "high": simulated_price * 1.01,
+                                "low": simulated_price * 0.99,
+                                "close": simulated_price,
+                                "volume": float(working.iloc[-20:]["volume"].mean()) if "volume" in working else 0,
+                                "amount": float(working.iloc[-20:]["amount"].mean()) if "amount" in working else 0,
+                                "turnover_rate": None,
+                                "pct_change": forecast_rows[-1]["forecast_return"] * 100,
+                            }
+                        ]
+                    ),
+                ],
+                ignore_index=True,
+            )
+
+        comparison = self._compare_future_projection(code, forecast_rows)
+        summary = self._future_summary(forecast_rows, comparison)
+        output = {
+            "stock_code": code,
+            "stock_name": config.stock_name,
+            "forecast_start_date": forecast_rows[0]["date"],
+            "forecast_end_date": forecast_rows[-1]["date"],
+            "horizon_days": horizon,
+            "base_price": base_price,
+            "selected_algorithms": [algo.id for algo in algorithms],
+            "strategy_mode": config.strategy_mode,
+            "projection": forecast_rows,
+            "comparison": comparison,
+            "summary": summary,
+            "diagnostics": diagnostics,
+        }
+        saved = self.save_future_forecast(output)
+        if saved is not None:
+            output["forecast_id"] = saved.id
+        return output
+
+    def save_future_forecast(self, output: dict[str, Any]) -> FutureSimulationForecast:
+        with session_scope() as session:
+            item = FutureSimulationForecast(
+                stock_code=output["stock_code"],
+                stock_name=output.get("stock_name", ""),
+                forecast_start_date=output["forecast_start_date"],
+                forecast_end_date=output["forecast_end_date"],
+                horizon_days=output["horizon_days"],
+                base_price=output["base_price"],
+                selected_algorithms=json.dumps(output["selected_algorithms"], ensure_ascii=False),
+                strategy_mode=output["strategy_mode"],
+                projection_json=json.dumps(output["projection"], ensure_ascii=False, default=str),
+                comparison_json=json.dumps(output.get("comparison", []), ensure_ascii=False, default=str),
+                summary_json=json.dumps(output["summary"], ensure_ascii=False, default=str),
+                diagnostics_json=json.dumps(output.get("diagnostics", {}), ensure_ascii=False, default=str),
+            )
+            session.add(item)
+            session.flush()
+            session.refresh(item)
+            return item
+
+    def list_future_forecasts(self, stock_code: str | None = None, limit: int = 20) -> list[FutureSimulationForecast]:
+        with session_scope() as session:
+            stmt = select(FutureSimulationForecast).order_by(FutureSimulationForecast.created_at.desc()).limit(limit)
+            if stock_code:
+                stmt = stmt.where(FutureSimulationForecast.stock_code == normalize_stock_code(stock_code))
+            return list(session.scalars(stmt).all())
+
+    def refresh_future_forecast_comparison(self, forecast_id: int) -> dict[str, Any]:
+        with session_scope() as session:
+            item = session.get(FutureSimulationForecast, forecast_id)
+            if not item:
+                raise ValueError(f"未来预测记录不存在：{forecast_id}")
+            projection = json.loads(item.projection_json or "[]")
+            comparison = self._compare_future_projection(item.stock_code, projection)
+            summary = self._future_summary(projection, comparison)
+            item.comparison_json = json.dumps(comparison, ensure_ascii=False, default=str)
+            item.summary_json = json.dumps(summary, ensure_ascii=False, default=str)
+            session.flush()
+            return {"comparison": comparison, "summary": summary}
+
     def _load_stock_data(self, stock_code: str, start_date: date, end_date: date) -> pd.DataFrame:
         service = StockDataService()
         service.update_daily_data(stock_code, days=max(420, (end_date - start_date).days + 120))
@@ -304,6 +440,11 @@ class HistoricalSimulationService:
             return df
         mask = (df["date"] >= start_date) & (df["date"] <= end_date)
         return df.loc[mask].sort_values("date").reset_index(drop=True)
+
+    def _load_recent_stock_data(self, stock_code: str, min_rows: int = 90) -> pd.DataFrame:
+        service = StockDataService()
+        service.update_daily_data(stock_code, days=max(180, min_rows * 3))
+        return service.get_daily_dataframe(stock_code, limit=max(min_rows, 180))
 
     def _technical_snapshot(self, stock_code: str, df: pd.DataFrame) -> dict[str, Any]:
         close = df["close"].astype(float)
@@ -480,6 +621,92 @@ class HistoricalSimulationService:
         blockers = diagnostics["trade_blockers"]
         if len(blockers) < 20:
             blockers.append({"date": block_date, "code": code, "message": message})
+
+    def _run_algorithms_for_simulation(self, algorithms: list[Any], ctx: dict[str, Any], diagnostics: dict[str, Any], run_date) -> list[dict[str, Any]]:
+        results = []
+        for algo in algorithms:
+            try:
+                raw = algo.runner(ctx)
+                normalized = self.algorithm_service._normalize_result(raw, algo)
+                results.append(normalized)
+                self._record_algorithm_diagnostic(diagnostics, algo, normalized, run_date)
+            except Exception as exc:
+                diagnostics["algorithms"].setdefault(
+                    algo.id,
+                    {"name": algo.name, "category": algo.category, "status": "error", "warnings": 0, "errors": 0, "examples": []},
+                )
+                diagnostics["algorithms"][algo.id]["errors"] += 1
+                diagnostics["algorithms"][algo.id]["examples"].append(
+                    {"date": run_date, "step": "algorithm_runner", "message": str(exc)}
+                )
+                results.append(
+                    self.algorithm_service._normalize_result(
+                        {
+                            "score": 50,
+                            "view": algo.category,
+                            "direction": "neutral",
+                            "position_bias": 0,
+                            "reasons": [f"算法执行失败，已按中性处理：{exc}"],
+                            "risks": ["该算法在本次模拟中出现异常，需要检查数据或参数。"],
+                        },
+                        algo,
+                    )
+                )
+        return results
+
+    def _future_market_date(self, last_date: date, step: int) -> date:
+        current = last_date
+        added = 0
+        while added < step:
+            current = current + timedelta(days=1)
+            if current.weekday() < 5:
+                added += 1
+        return current
+
+    def _compare_future_projection(self, stock_code: str, forecast_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not forecast_rows:
+            return []
+        actual = StockDataService().get_daily_dataframe(stock_code, limit=260)
+        if actual.empty:
+            return []
+        actual_map = {row["date"]: row for row in actual.to_dict("records")}
+        comparison = []
+        for row in forecast_rows:
+            actual_row = actual_map.get(row["date"])
+            if not actual_row:
+                continue
+            actual_close = float(actual_row["close"])
+            forecast_price = float(row["forecast_price"])
+            comparison.append(
+                {
+                    "date": row["date"],
+                    "forecast_price": forecast_price,
+                    "actual_close": actual_close,
+                    "gap_pct": forecast_price / actual_close - 1 if actual_close else None,
+                    "forecast_return": row["forecast_return"],
+                    "actual_return": actual_close / float(forecast_rows[0]["base_price"]) - 1 if forecast_rows[0]["base_price"] else None,
+                    "action": row.get("action"),
+                    "score": row.get("score"),
+                }
+            )
+        return comparison
+
+    def _future_summary(self, forecast_rows: list[dict[str, Any]], comparison: list[dict[str, Any]]) -> dict[str, Any]:
+        if not forecast_rows:
+            return {"available": False}
+        final_return = float(forecast_rows[-1]["forecast_return"])
+        max_return = max(float(row["forecast_return"]) for row in forecast_rows)
+        min_return = min(float(row["forecast_return"]) for row in forecast_rows)
+        errors = [abs(float(row["gap_pct"])) for row in comparison if row.get("gap_pct") is not None]
+        return {
+            "available": True,
+            "final_forecast_return": final_return,
+            "max_forecast_return": max_return,
+            "min_forecast_return": min_return,
+            "comparison_points": len(comparison),
+            "mean_abs_gap": None if not errors else sum(errors) / len(errors),
+            "max_abs_gap": None if not errors else max(errors),
+        }
 
     def _diagnostic_summary(self, diagnostics: dict[str, Any]) -> str:
         algos = diagnostics.get("algorithms", {})

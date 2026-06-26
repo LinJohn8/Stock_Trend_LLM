@@ -31,7 +31,7 @@ License: [MIT](LICENSE)
 - Run selectable LLM review skills after deterministic calculations, such as conservative decision review, technical signal explanation, news risk checking, and learning-memory review.
 - Run selectable deterministic analysis algorithms from the dashboard after pulling stock data.
 - Collect and score stock news evidence before LLM review.
-- Send HTML email reports at configurable times. Default sample: `08:50,14:20`.
+- Send HTML email reports at configurable times. Default sample: `08:50,12:50`.
 - Provide a Streamlit dashboard for watchlists, holdings, daily analysis, stock details, backtest review, email settings, and system settings.
 - Includes macOS command scripts for local-only or LAN-accessible startup.
 
@@ -81,7 +81,7 @@ Never commit your real `.env`. It is ignored by `.gitignore`.
 Use `.env.sample` for public configuration examples:
 
 ```env
-EMAIL_SEND_TIMES=08:50,14:20
+EMAIL_SEND_TIMES=08:50,12:50
 EMAIL_HOST=smtp.qq.com
 EMAIL_PORT=465
 EMAIL_USERNAME=your_email@qq.com
@@ -144,7 +144,7 @@ The dashboard process also starts APScheduler for daily jobs:
 The scheduler registers one daily job per configured send time. For example:
 
 ```env
-EMAIL_SEND_TIMES=08:50,14:20
+EMAIL_SEND_TIMES=08:50,12:50
 ```
 
 Reports only include currently active watchlist stocks and active holdings.
